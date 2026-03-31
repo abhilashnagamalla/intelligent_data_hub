@@ -1,0 +1,1 @@
+# Fix Login Improvements\n\n- [x] / redirects to /login\n- [x] Dark/black input fields\n- [ ] Fix Google auth (Firebase config/network issue - test email/mock)\n- [ ] Login success → dashboard (already works)\n- [ ] Complete

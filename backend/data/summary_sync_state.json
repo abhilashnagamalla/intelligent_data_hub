@@ -1,0 +1,14 @@
+{
+  "agriculture": {
+    "datasetCount": 1409,
+    "label": "Agriculture",
+    "source": "api",
+    "updatedAt": 1774888573
+  },
+  "census": {
+    "datasetCount": 1848,
+    "label": "Census and Surveys",
+    "source": "local_fallback",
+    "updatedAt": 1774890446
+  }
+}

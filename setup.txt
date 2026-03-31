@@ -1,0 +1,39 @@
+cd backend
+python -m uvicorn app.main:app --reload
+
+
+python -m spacy download en_core_web_sm
+
+
+npm create vite@latest frontend
+cd frontend
+npm install
+npm install axios
+npm install chart.js react-chartjs-2
+npm install react-router-dom
+npm install firebase
+npm install framer-motion lucide-react i18next react-i18next
+npm install i18next-browser-languagedetector
+npm install -D tailwindcss@3.4.4 postcss autoprefixer
+npx tailwindcss init -p
+npm run dev
+
+git status          
+git add .
+git commit -m "Updated project files"
+git push origin main
+
+cd backend
+venv\Scripts\activate
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+pip install aiosqlite
+
+
+git rm -r --cached node_modules
+git rm -r --cached datasets
+git rm --cached .env
+
+git branch -M main
+git remote add origin https://github.com/abhilashnagamalla/intelligent-data-hub.git
+git push -u origin main

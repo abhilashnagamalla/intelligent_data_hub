@@ -1,0 +1,27 @@
+name: intelligent-data-hub
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: intelligent-data-hub-backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/data:/app/backend/data
+      - ./backend/summary:/app/backend/summary
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: intelligent-data-hub-frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped

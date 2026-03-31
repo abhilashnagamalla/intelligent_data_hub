@@ -1,0 +1,89 @@
+INTELLIGENT-DATA-HUB
+│
+├── backend/
+│   ├── app/
+│   │   ├── routers/
+│   │   │   ├── chat.py
+│   │   │   ├── chatbot.py
+│   │   │   ├── dataset_explainer.py
+│   │   │   ├── datasets.py
+│   │   │   └── domains.py
+│   │   │
+│   │   ├── services/
+│   │   │   ├── catalog_service.py
+│   │   │   ├── chatbot_service.py
+│   │   │   ├── data_service.py
+│   │   │   ├── dataset_explainer.py
+│   │   │   ├── dataset_visualizer.py
+│   │   │   ├── domain_resources.py
+│   │   │   ├── resource_discovery.py
+│   │   │   └── scheduler.py
+│   │   │
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   └── schemas.py
+│   │
+│   └── charts/
+│
+├── datasets/
+│   ├── agriculture_datasets/
+│   ├── census_datasets/
+│   ├── education_datasets/
+│   ├── finance_datasets/
+│   ├── health_datasets/
+│   └── transport_datasets/
+│
+├── frontend/
+│   ├── public/
+│   │
+│   ├── src/
+│   │   ├── assets/
+│   │   │   └── react.svg
+│   │   │
+│   │   ├── components/
+│   │   │   ├── Chatbot.jsx
+│   │   │   ├── DatasetModal.jsx
+│   │   │   ├── Header.jsx
+│   │   │   └── Sidebar.jsx
+│   │   │
+│   │   ├── context/
+│   │   │
+│   │   ├── layouts/
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── Chatbot.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Domain.jsx
+│   │   │   ├── DomainPage.jsx
+│   │   │   └── Login.jsx
+│   │   │
+│   │   ├── i18n.js
+│   │   ├── api.js
+│   │   ├── App.jsx
+│   │   ├── firebase.js
+│   │   ├── index.css
+│   │   └── main.jsx
+│   │
+│   ├── index.html
+│   ├── eslint.config.js
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
+│   ├── vite.config.js
+│   └── package.json
+│
+├── node_modules/
+├── venv/
+│
+├── .env
+├── .gitignore
+├── Dockerfile
+├── fetch_multidomain_datasets.py
+├── resrc_extract.py
+├── working.py
+├── requirements.txt
+│
+├── proj_structure.txt
+├── setup.txt
+└── README.md

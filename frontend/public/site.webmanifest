@@ -1,0 +1,9 @@
+{
+  "name": "Intelligent Data Hub",
+  "short_name": "IDH",
+  "description": "Dataset-driven public data portal for search, summaries, insights, and sector-wise exploration.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000"
+}
