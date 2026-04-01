@@ -51,10 +51,48 @@
     "downloads": 0,
     "views": 0
   },
+<<<<<<< HEAD
+=======
+  "agriculture:0accb56b-525f-4408-a45b-67d4bd25bdc2": {
+    "downloads": 1,
+    "views": 6
+  },
+>>>>>>> 14c050e (Updated UI and fixed chatbot issues)
   "agriculture:15d038ce-eb4e-49ea-bf98-94025b8a8930.csv": {
     "downloads": 1,
     "views": 0
   },
+<<<<<<< HEAD
+=======
+  "agriculture:74066b33-0795-42ce-ade8-11972851c590": {
+    "downloads": 0,
+    "views": 1
+  },
+  "agriculture:7523d9bd-e10e-428d-a55c-9233ac73b417": {
+    "downloads": 0,
+    "views": 1
+  },
+  "agriculture:82649bd6-1681-4b23-bd06-956692ee115a": {
+    "downloads": 0,
+    "views": 1
+  },
+  "agriculture:9aacbfc0-8982-489a-b4b7-be5246e2848d": {
+    "downloads": 0,
+    "views": 1
+  },
+  "agriculture:c7c66fe2-8add-416c-aa5a-4c6405c24c01": {
+    "downloads": 0,
+    "views": 1
+  },
+  "census:0bf06a02-78fc-4e3c-b608-5e4fd3bf7df3": {
+    "downloads": 0,
+    "views": 1
+  },
+  "census:4d936669-40d2-4740-9777-3206650e0edc": {
+    "downloads": 0,
+    "views": 2
+  },
+>>>>>>> 14c050e (Updated UI and fixed chatbot issues)
   "education:001_State-wise_enrolment_for_Minority_Females_in__1aba343b.csv": {
     "downloads": 0,
     "views": 0

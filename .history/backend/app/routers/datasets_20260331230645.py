@@ -151,7 +151,6 @@ def dataset_analysis(sector: str, dataset_id: str):
     stats = get_dataset_stats(sector, dataset_id)
     full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_VISUALIZATION_ROWS)
 
-<<<<<<< HEAD
     if full_dataset.get("tooLarge"):
         visualization = {"message": "Dataset too large for visualization.", "charts": []}
         insights = []
@@ -161,29 +160,6 @@ def dataset_analysis(sector: str, dataset_id: str):
         visualization = infer_visualization(records, columns)
         insights = dataset_insights(records, columns)
 
-=======
-    records = full_dataset.get("records", [])
-    columns = full_dataset.get("columns", [])
-    if full_dataset.get("tooLarge") or not records:
-        from ..services.dataset_catalog import summary_file_for_sector
-        summary_path = summary_file_for_sector(sector)
-        import os
-        import pandas as pd
-        if os.path.exists(summary_path):
-            summary_df = pd.read_csv(summary_path)
-            records = summary_df.to_dict('records')[:1000]
-            columns = summary_df.columns.tolist()
-            visualization = infer_visualization(records, columns)
-            insights = dataset_insights(records, columns)
-        else:
-            visualization = {"message": "Dataset too large for live visualization. Summary charts unavailable.", "charts": []}
-            insights = []
-    else:
-        visualization = infer_visualization(records, columns)
-        insights = dataset_insights(records, columns)
-
-
->>>>>>> 14c050e (Updated UI and fixed chatbot issues)
     return {
         "dataset": enriched,
         "stats": stats,

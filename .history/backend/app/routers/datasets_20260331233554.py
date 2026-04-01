@@ -151,17 +151,6 @@ def dataset_analysis(sector: str, dataset_id: str):
     stats = get_dataset_stats(sector, dataset_id)
     full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_VISUALIZATION_ROWS)
 
-<<<<<<< HEAD
-    if full_dataset.get("tooLarge"):
-        visualization = {"message": "Dataset too large for visualization.", "charts": []}
-        insights = []
-    else:
-        records = full_dataset.get("records", [])
-        columns = full_dataset.get("columns", [])
-        visualization = infer_visualization(records, columns)
-        insights = dataset_insights(records, columns)
-
-=======
     records = full_dataset.get("records", [])
     columns = full_dataset.get("columns", [])
     if full_dataset.get("tooLarge") or not records:
@@ -183,7 +172,6 @@ def dataset_analysis(sector: str, dataset_id: str):
         insights = dataset_insights(records, columns)
 
 
->>>>>>> 14c050e (Updated UI and fixed chatbot issues)
     return {
         "dataset": enriched,
         "stats": stats,
