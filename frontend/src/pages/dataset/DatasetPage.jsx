@@ -1,6 +1,6 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Search, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ArrowLeft, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../../api';
 import CatalogCard from '../../components/dataset/CatalogCard';
@@ -13,6 +13,73 @@ function apiErrorMessage(error, fallback) {
     return 'Data.gov.in is temporarily unavailable. Please try again shortly.';
   }
   return fallback;
+}
+
+function Pagination({ page, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, page - 1);
+      let end = Math.min(totalPages - 1, page + 1);
+
+      if (page <= 3) { start = 2; end = maxVisible; }
+      if (page >= totalPages - 2) { start = totalPages - maxVisible + 1; end = totalPages - 1; }
+
+      if (start > 2) pages.push('...');
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  const btnBase = 'px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-30';
+
+  return (
+    <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="text-sm text-gray-500">Page {page} of {totalPages}</div>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onPageChange(1)} disabled={page === 1} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="First">
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
+        <button onClick={() => onPageChange(page - 1)} disabled={page === 1} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Previous">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {getPageNumbers().map((p, idx) =>
+          p === '...' ? (
+            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              className={`${btnBase} min-w-[36px] ${
+                p === page
+                  ? 'bg-black text-white dark:bg-white dark:text-black'
+                  : 'border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button onClick={() => onPageChange(page + 1)} disabled={page === totalPages} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Next">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <button onClick={() => onPageChange(totalPages)} disabled={page === totalPages} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Last">
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function DatasetPage() {
@@ -116,7 +183,7 @@ export default function DatasetPage() {
             }
           }}
           placeholder="Search datasets by title, description, organization, or resource ID"
-          className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
+          className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-white"
         />
       </div>
 
@@ -137,19 +204,7 @@ export default function DatasetPage() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="text-sm text-gray-500">Page {currentPage} of {totalPages}</div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => updatePage(currentPage - 1)} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 disabled:opacity-40 flex items-center gap-2">
-                  <ChevronLeft className="w-4 h-4" /> Previous
-                </button>
-                <button onClick={() => updatePage(currentPage + 1)} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 disabled:opacity-40 flex items-center gap-2">
-                  Next <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination page={currentPage} totalPages={totalPages} onPageChange={updatePage} />
         </>
       )}
     </div>

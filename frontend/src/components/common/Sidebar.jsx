@@ -131,7 +131,7 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
               IDH
             </h2>
             <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-              Intelligent Data Hub
+              {t('Intelligent Data Hub')}
             </p>
           </div>
         )}

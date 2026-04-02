@@ -30,7 +30,7 @@ export default function Landing() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-3 sm:py-4 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-black text-sm sm:text-lg">ID</span>
+                <span className="text-white font-black text-sm sm:text-lg">IDH</span>
               </div>
               <h1 className="text-lg sm:text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 {/* Short name on very small screens */}
@@ -60,13 +60,13 @@ export default function Landing() {
             </h1>
 
             <p className="text-gray-700 dark:text-gray-300 font-medium mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed text-base sm:text-lg md:text-xl">
-              Unlock 100+ government domains with AI insights, datasets, and intelligent search.
+              Unlock 100+ datasets with AI insights, analytics, and intelligent search.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={() => handleOpenAuth('login')}
-                className="group w-full sm:w-auto bg-gradient-to-r from-primary to-secondary hover:from-primary/90 text-white font-black py-3 sm:py-4 px-6 sm:px-8 rounded-3xl text-base sm:text-lg flex items-center justify-center gap-3 shadow-2xl hover:shadow-3xl hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-300 border border-white/20 cursor-pointer"
+                className="group w-full sm:w-auto bg-gradient-to-r from-primary to-secondary text-white font-black py-3 sm:py-4 px-6 sm:px-8 rounded-3xl text-base sm:text-lg flex items-center justify-center gap-3 shadow-2xl border border-white/20 cursor-pointer"
               >
                 <User className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 Get Started

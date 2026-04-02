@@ -173,7 +173,7 @@ export default function Header({ onMenuToggle }) {
               >
                 <LogIn className="w-4 h-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t('Login with Google')}</span>
-                <span className="sm:hidden">Login</span>
+                <span className="sm:hidden">{t('Login')}</span>
               </button>
             )}
           </div>

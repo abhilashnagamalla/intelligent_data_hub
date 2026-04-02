@@ -110,7 +110,7 @@ export default function DomainCard({ domain, onClick }) {
 
       {/* Top Datasets */}
       <div className="mb-4 space-y-1">
-        <div className="font-medium text-xs text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">Top Datasets</div>
+        <div className="font-medium text-xs text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">{t('Top Datasets')}</div>
         <div className="space-y-1">
           {(domain.topDatasets || config.topDatasets).length > 0 ? (
             (domain.topDatasets || config.topDatasets).map((dataset, index) => (
@@ -120,7 +120,7 @@ export default function DomainCard({ domain, onClick }) {
               </div>
             ))
           ) : (
-            <div className="text-xs text-gray-400 italic">No datasets available</div>
+            <div className="text-xs text-gray-400 italic">{t('No datasets available')}</div>
           )}
         </div>
       </div>

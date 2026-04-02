@@ -1,7 +1,8 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, Eye, BarChart3, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Download, Eye, BarChart3, FileText, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DatasetMeta from '../../components/dataset/DatasetMeta';
 import DatasetVisualizer from '../../components/dataset/DatasetVisualizer';
@@ -36,11 +37,81 @@ function formatCsv(records, columns) {
   return rows.join('\n');
 }
 
+function Pagination({ page, totalPages, onPageChange, disabled }) {
+  const { t } = useTranslation();
+  if (totalPages <= 1) return null;
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, page - 1);
+      let end = Math.min(totalPages - 1, page + 1);
+
+      if (page <= 3) { start = 2; end = maxVisible; }
+      if (page >= totalPages - 2) { start = totalPages - maxVisible + 1; end = totalPages - 1; }
+
+      if (start > 2) pages.push('...');
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  const btnBase = 'px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-30';
+
+  return (
+    <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="text-sm text-gray-500">{t('Page')} {page} {t('of')} {totalPages} • 500 {t('rows per page')}</div>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onPageChange(1)} disabled={page === 1 || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="First">
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
+        <button onClick={() => onPageChange(page - 1)} disabled={page === 1 || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Previous">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {getPageNumbers().map((p, idx) =>
+          p === '...' ? (
+            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              disabled={disabled}
+              className={`${btnBase} min-w-[36px] ${
+                p === page
+                  ? 'bg-black text-white dark:bg-white dark:text-black'
+                  : 'border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button onClick={() => onPageChange(page + 1)} disabled={page === totalPages || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Next">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <button onClick={() => onPageChange(totalPages)} disabled={page === totalPages || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Last">
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function DatasetDetailLive() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { trackView, trackDownload } = useEngagement();
+  const { t } = useTranslation();
   const trackedRef = useRef(false);
 
   const [dataset, setDataset] = useState(location.state || null);
@@ -99,6 +170,15 @@ export default function DatasetDetailLive() {
           trackedRef.current = true;
           const trackedStats = await trackView(dataset.id, sector);
           if (!cancelled && trackedStats) setStats(trackedStats);
+
+          // Persist to localStorage for Profile analytics
+          try {
+            const viewed = JSON.parse(localStorage.getItem('viewed_datasets') || '[]');
+            if (!viewed.includes(dataset.id)) {
+              viewed.push(dataset.id);
+              localStorage.setItem('viewed_datasets', JSON.stringify(viewed));
+            }
+          } catch (_e) { /* ignore localStorage errors */ }
         }
       } catch (statsError) {
         console.error(statsError);
@@ -182,6 +262,14 @@ export default function DatasetDetailLive() {
       if (engagement?.downloads) {
         setStats((current) => ({ ...(current || {}), downloads: engagement.downloads, views: engagement.views ?? current?.views ?? 0 }));
       }
+
+      // Persist to localStorage for Profile analytics
+      try {
+        const counts = JSON.parse(localStorage.getItem('download_counts') || '{}');
+        counts[dataset.id] = (counts[dataset.id] || 0) + 1;
+        localStorage.setItem('download_counts', JSON.stringify(counts));
+      } catch (_e) { /* ignore localStorage errors */ }
+
       const response = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}/raw`, {
         params: { full: true },
         responseType: 'blob',
@@ -202,70 +290,75 @@ export default function DatasetDetailLive() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[60vh] text-gray-500">Loading dataset...</div>;
+    return <div className="flex items-center justify-center min-h-[60vh] text-gray-500">{t('Loading dataset...')}</div>;
   }
 
   if (error || !dataset) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500 gap-4">
-        <div className="text-2xl font-bold">Dataset not found</div>
+        <div className="text-2xl font-bold">{t('Dataset not found')}</div>
         <div>{error}</div>
-        <button onClick={() => navigate(-1)} className="px-5 py-3 rounded-xl bg-black text-white">Back</button>
+        <button onClick={() => navigate(-1)} className="px-5 py-3 rounded-xl bg-black text-white">{t('Back')}</button>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-black bg-white dark:bg-gray-950 p-6 sm:p-8">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-black dark:hover:text-white mb-4">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-4 h-4" /> {t('Back')}
         </button>
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-          <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">{dataset.title}</h1>
-            <p className="text-gray-600 dark:text-gray-400 max-w-3xl">{dataset.description || 'Dataset details and API-backed preview are available below.'}</p>
-          </div>
-          <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-black text-white font-semibold disabled:opacity-50">
-            <Download className="w-4 h-4" /> {downloading ? 'Downloading...' : 'Download CSV'}
-          </button>
+        <div className="space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">{dataset.title}</h1>
+          <p className="text-gray-600 dark:text-gray-400 max-w-3xl">{dataset.description || 'Dataset details and API-backed preview are available below.'}</p>
         </div>
       </motion.div>
 
+      {/* Metadata */}
       <section className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6">
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Metadata</h2>
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Metadata')}</h2>
         <DatasetMeta dataset={dataset} />
       </section>
 
+      {/* Stats Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2">Rows</div>
+          <div className="text-sm text-gray-500 mb-2">{t('Rows')}</div>
           <div className="text-2xl font-black text-gray-900 dark:text-white">{(stats?.rows || dataset.numberOfRows || 0).toLocaleString()}</div>
         </div>
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2">Columns</div>
+          <div className="text-sm text-gray-500 mb-2">{t('Columns')}</div>
           <div className="text-2xl font-black text-gray-900 dark:text-white">{stats?.columnCount || dataset.numberOfColumns || stats?.columns?.length || 0}</div>
         </div>
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Eye className="w-4 h-4" />Views</div>
-          <div className="text-2xl font-black text-green-600">{(stats?.views || dataset.views || 0).toLocaleString()}</div>
+          <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Eye className="w-4 h-4" />{t('Views')}</div>
+          <div className="text-2xl font-black text-green-600">{(stats?.views ?? dataset.views ?? 0).toLocaleString()}</div>
         </div>
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Download className="w-4 h-4" />Downloads</div>
-          <div className="text-2xl font-black text-blue-600">{(stats?.downloads || dataset.downloads || 0).toLocaleString()}</div>
+          <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Download className="w-4 h-4" />{t('Downloads')}</div>
+          <div className="text-2xl font-black text-blue-600">{(stats?.downloads ?? dataset.downloads ?? 0).toLocaleString()}</div>
         </div>
       </section>
 
+      {/* Data View Section */}
       <section className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 space-y-6">
-        <div className="flex flex-wrap gap-3">
-          <button onClick={() => setActiveView('table')} className={`px-4 py-2 rounded-xl font-semibold ${activeView === 'table' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
-            View Details
+        {/* Action bar with tabs + download button */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={() => setActiveView('table')} className={`px-4 py-2 rounded-xl font-semibold text-sm ${activeView === 'table' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
+            <FileText className="w-4 h-4 inline mr-2" />{t('View Details')}
           </button>
-          <button onClick={() => setActiveView('raw')} className={`px-4 py-2 rounded-xl font-semibold ${activeView === 'raw' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
-            Raw View
+          <button onClick={() => setActiveView('raw')} className={`px-4 py-2 rounded-xl font-semibold text-sm ${activeView === 'raw' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
+            {t('Raw View')}
           </button>
-          <button onClick={() => setActiveView('viz')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 ${activeView === 'viz' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
-            <BarChart3 className="w-4 h-4" /> Visualization
+          <button onClick={() => setActiveView('viz')} className={`px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 ${activeView === 'viz' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
+            <BarChart3 className="w-4 h-4" /> {t('Visualization')}
+          </button>
+          <div className="flex-1" />
+          <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-black text-white font-semibold text-sm disabled:opacity-50 hover:bg-gray-800 transition-colors">
+            {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {downloading ? t('Downloading...') : t('Download CSV')}
           </button>
         </div>
 
@@ -303,25 +396,15 @@ export default function DatasetDetailLive() {
               </div>
             )}
 
-            {!pageLoading && !pageError && pageData.totalPages > 1 && (
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="text-sm text-gray-500">Page {page} of {pageData.totalPages} • 500 rows per page</div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 disabled:opacity-40 flex items-center gap-2">
-                    <ChevronLeft className="w-4 h-4" /> Previous
-                  </button>
-                  <button onClick={() => setPage((current) => Math.min(pageData.totalPages, current + 1))} disabled={page === pageData.totalPages} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 disabled:opacity-40 flex items-center gap-2">
-                    Next <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+            {!pageLoading && !pageError && (
+              <Pagination page={page} totalPages={pageData.totalPages} onPageChange={setPage} disabled={pageLoading} />
             )}
           </>
         )}
 
         {activeView === 'viz' && (
           <>
-            {vizState.loading && <div className="text-gray-500">Generating dataset-driven visualization from the full dataset...</div>}
+            {vizState.loading && <div className="text-gray-500">{t('Generating visualization...')}</div>}
             {vizState.error && <div className="text-red-500">{vizState.error}</div>}
             {!vizState.loading && !vizState.error && (
               <DatasetVisualizer visualization={vizState.data?.visualization} insights={vizState.data?.insights || []} />
@@ -332,4 +415,3 @@ export default function DatasetDetailLive() {
     </div>
   );
 }
-

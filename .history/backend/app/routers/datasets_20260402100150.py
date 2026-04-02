@@ -1,9 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
-import os
-import pandas as pd
 import requests
-
 
 from app.services.dataset_catalog import (
     DETAIL_PAGE_SIZE,
@@ -22,7 +19,6 @@ from app.services.dataset_catalog import (
     search_datasets,
     start_summary_refresh,
     stream_dataset_csv,
-    summary_file_for_sector,
 )
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
@@ -157,10 +153,7 @@ def dataset_analysis(sector: str, dataset_id: str):
 
     records = full_dataset.get("records", [])
     columns = full_dataset.get("columns", [])
-    records = full_dataset.get("records", [])
-    columns = full_dataset.get("columns", [])
     if full_dataset.get("tooLarge") or not records:
-
         from ..services.dataset_catalog import summary_file_for_sector
         summary_path = summary_file_for_sector(sector)
         import os
@@ -178,6 +171,51 @@ def dataset_analysis(sector: str, dataset_id: str):
         visualization = infer_visualization(records, columns)
         insights = dataset_insights(records, columns)
 
+
+>>>>>>> 14c050e (Updated UI and fixed chatbot issues)
+
+=======
+    records = full_dataset.get("records", [])
+    columns = full_dataset.get("columns", [])
+    if full_dataset.get("tooLarge") or not records:
+        summary_path = summary_file_for_sector(sector)
+        if os.path.exists(summary_path):
+            summary_df = pd.read_csv(summary_path)
+            records = summary_df.to_dict('records')[:1000]
+            columns = summary_df.columns.tolist()
+            visualization = infer_visualization(records, columns)
+            insights = dataset_insights(records, columns)
+        else:
+            visualization = {"message": "Dataset too large for live visualization. Summary charts unavailable.", "charts": []}
+            insights = []
+    else:
+        visualization = infer_visualization(records, columns)
+        insights = dataset_insights(records, columns)
+
+
+=======
+    records = full_dataset.get("records", [])
+    columns = full_dataset.get("columns", [])
+    if full_dataset.get("tooLarge") or not records:
+        from ..services.dataset_catalog import summary_file_for_sector
+        summary_path = summary_file_for_sector(sector)
+        import os
+        import pandas as pd
+        if os.path.exists(summary_path):
+            summary_df = pd.read_csv(summary_path)
+            records = summary_df.to_dict('records')[:1000]
+            columns = summary_df.columns.tolist()
+            visualization = infer_visualization(records, columns)
+            insights = dataset_insights(records, columns)
+        else:
+            visualization = {"message": "Dataset too large for live visualization. Summary charts unavailable.", "charts": []}
+            insights = []
+    else:
+        visualization = infer_visualization(records, columns)
+        insights = dataset_insights(records, columns)
+
+
+>>>>>>> 14c050e (Updated UI and fixed chatbot issues)
     return {
         "dataset": enriched,
         "stats": stats,
