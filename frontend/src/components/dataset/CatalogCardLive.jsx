@@ -91,7 +91,7 @@ export default function CatalogCardLive({ dataset, onView }) {
     >
       {/* Bookmark button only */}
       <div className="absolute top-4 right-4 z-10">
-        <button onClick={toggleBookmark} className={`p-2 rounded-xl transition-all border ${isBookmarked ? 'bg-amber-100 text-amber-600 border-amber-300' : 'bg-white dark:bg-gray-900 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 border-gray-300 dark:border-gray-700'}`} title={isBookmarked ? 'Remove from Wishlist' : 'Add to Wishlist'}>
+        <button onClick={toggleBookmark} className={`rounded-xl border-2 border-black p-2 transition-all ${isBookmarked ? 'bg-amber-100 text-amber-600' : 'bg-white text-gray-500 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800'}`} title={isBookmarked ? 'Remove from Wishlist' : 'Add to Wishlist'}>
           <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
         </button>
       </div>
@@ -106,14 +106,14 @@ export default function CatalogCardLive({ dataset, onView }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-3 bg-gray-50 dark:bg-gray-900">
+        <div className="rounded-xl border-2 border-black bg-gray-50 p-3 dark:bg-gray-900">
           <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Published Date')}</div>
           <div className="font-semibold text-gray-900 dark:text-white">{formatDate(dataset.publishedDate)}</div>
         </div>
         <button
           type="button"
           onClick={handleGeoView}
-          className="rounded-xl border border-gray-200 dark:border-gray-800 p-3 bg-gray-50 dark:bg-gray-900 text-left hover:border-black dark:hover:border-white transition-colors"
+          className="rounded-xl border-2 border-black bg-gray-50 p-3 text-left transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800"
         >
           <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Geo View')}</div>
           <div className="font-semibold text-emerald-600 flex items-center gap-2">
@@ -124,11 +124,11 @@ export default function CatalogCardLive({ dataset, onView }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6 text-sm">
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+        <div className="rounded-xl border-2 border-black p-3">
           <div className="flex items-center gap-2 text-gray-500 mb-1"><Eye className="w-4 h-4" />{t('Views')}</div>
           <div className="font-bold text-green-600 text-lg">{views.toLocaleString()}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+        <div className="rounded-xl border-2 border-black p-3">
           <div className="flex items-center gap-2 text-gray-500 mb-1"><Download className="w-4 h-4" />{t('Downloads')}</div>
           <div className="font-bold text-blue-600 text-lg">{downloads.toLocaleString()}</div>
         </div>

@@ -101,21 +101,21 @@ export default function DomainPage() {
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3 xl:max-w-5xl">
-          <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+          <div className="rounded-2xl border-2 border-black p-4">
             <div className="text-xs uppercase tracking-wide text-gray-500">{t('Catalogs')}</div>
             <div className="text-3xl font-black text-gray-900 dark:text-white">
               {catalogLoading ? '...' : stats.catalogs.toLocaleString()}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+          <div className="rounded-2xl border-2 border-black p-4">
             <div className="text-xs uppercase tracking-wide text-gray-500">{t('Datasets')}</div>
             <div className="text-3xl font-black text-gray-900 dark:text-white">
               {catalogLoading ? '...' : stats.datasets.toLocaleString()}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+          <div className="rounded-2xl border-2 border-black p-4">
             <div className="text-xs uppercase tracking-wide text-gray-500">{t('Quick Filters')}</div>
             <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{t('State')}</div>
 
@@ -123,7 +123,7 @@ export default function DomainPage() {
               <select
                 value={selectedState}
                 onChange={(event) => setSelectedState(event.target.value)}
-                className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-900 outline-none transition focus:border-black dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:focus:border-white"
+                className="w-full appearance-none rounded-xl border-2 border-black bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-900 outline-none transition focus:border-black dark:bg-gray-900 dark:text-white"
               >
                 {stateOptions.map((state) => (
                   <option key={state.code} value={state.code}>
@@ -156,11 +156,11 @@ export default function DomainPage() {
           )}
 
           {!catalogLoading && catalogError && catalogs.length === 0 ? (
-            <div className="rounded-3xl border border-gray-200 p-10 text-center text-gray-500 dark:border-gray-800">
+            <div className="rounded-3xl border-2 border-black p-10 text-center text-gray-500">
               {t(catalogError)}
             </div>
           ) : !catalogLoading && catalogs.length === 0 ? (
-            <div className="rounded-3xl border border-gray-200 p-10 text-center text-gray-500 dark:border-gray-800">
+            <div className="rounded-3xl border-2 border-black p-10 text-center text-gray-500">
               {hasActiveStateFilter
                 ? `${t('No datasets found for this sector.')} ${t('State')}: ${selectedStateLabel}`
                 : t('No datasets found for this sector.')}
@@ -178,7 +178,7 @@ export default function DomainPage() {
           )}
 
           {catalogLoading && catalogs.length === 0 && (
-            <div className="rounded-3xl border border-gray-200 p-10 text-center text-gray-500 dark:border-gray-800">
+            <div className="rounded-3xl border-2 border-black p-10 text-center text-gray-500">
               {t('Loading catalogs...')}
             </div>
           )}

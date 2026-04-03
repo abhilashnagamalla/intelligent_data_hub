@@ -69,7 +69,7 @@ export default function DatasetMeta({ dataset, className = "" }) {
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 ${className}`}>
       {metadataItems.map((item, idx) => (
-        <div key={idx} className="flex items-center gap-3 p-4 bg-white/50 dark:bg-gray-800/40 backdrop-blur-sm rounded-2xl border border-white/20 dark:border-gray-700/30 shadow-sm hover:shadow-md transition-all duration-300 group">
+        <div key={idx} className="group flex items-center gap-3 rounded-2xl border-2 border-black bg-white/50 p-4 shadow-sm transition-all duration-300 hover:shadow-md dark:bg-gray-800/40 backdrop-blur-sm">
           <div className={`p-2 rounded-xl bg-gray-50 dark:bg-gray-900/50 group-hover:scale-110 transition-transform ${item.color}`}>
             <item.icon className="w-4 h-4" />
           </div>

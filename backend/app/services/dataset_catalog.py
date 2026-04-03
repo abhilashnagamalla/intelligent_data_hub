@@ -116,6 +116,8 @@ RAW_STATE_FILTER_ALIASES = {
     "PY": {"puducherry", "pondicherry"},
 }
 
+SUMMARY_BACKED_CATALOG_SECTORS = {"health"}
+
 SUMMARY_COLUMNS = [
     "Serial Number",
     "Dataset Name",
@@ -818,9 +820,99 @@ def load_catalogs() -> dict[str, list[dict[str, Any]]]:
         return catalogs
 
 
-def local_sector_page(sector_key: str, *, page: int = 1, limit: int = CATALOG_PAGE_SIZE) -> dict[str, Any]:
+def sector_uses_summary_catalog(sector_key: str) -> bool:
+    return normalize_sector_key(sector_key) in SUMMARY_BACKED_CATALOG_SECTORS
+
+
+def summary_title_state(title: Any) -> str:
+    text = str(title or "").strip()
+    if " - " in text:
+        suffix = text.rsplit(" - ", 1)[1].strip()
+        if suffix:
+            return suffix
+    return "All States"
+
+
+def summary_title_description(title: Any) -> str:
+    text = str(title or "").strip()
+    if " - " in text:
+        return text.rsplit(" - ", 1)[0].strip()
+    return text
+
+
+def sector_catalog_datasets(sector_key: str) -> list[dict[str, Any]]:
     normalized_sector = normalize_sector_key(sector_key)
-    datasets = [enrich_dataset(dataset) for dataset in load_catalogs().get(normalized_sector, [])]
+    base_datasets = load_catalogs().get(normalized_sector, [])
+
+    if not sector_uses_summary_catalog(normalized_sector):
+        return base_datasets
+
+    summary_path = SUMMARY_DIR / f"{normalized_sector}.csv"
+    if not summary_path.exists():
+        return base_datasets
+
+    merged: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    base_by_id = {str(dataset.get("id") or ""): dataset for dataset in base_datasets}
+
+    try:
+        with summary_path.open("r", newline="", encoding="utf-8-sig") as csv_file:
+            for row in csv.DictReader(csv_file):
+                resource_id = str(row.get("Resource ID") or "").strip().replace(".csv", "")
+                if not resource_id or resource_id in seen_ids:
+                    continue
+
+                base_dataset = dict(base_by_id.get(resource_id) or {})
+                title = str(row.get("Dataset Name") or base_dataset.get("title") or "Untitled Dataset").strip()
+                merged.append(
+                    {
+                        "id": resource_id,
+                        "resourceId": resource_id,
+                        "title": title,
+                        "description": str(base_dataset.get("description") or summary_title_description(title)).strip(),
+                        "tags": normalize_tag_list(
+                            base_dataset.get("tags"),
+                            title,
+                            sector_label(normalized_sector),
+                        ),
+                        "organization": str(
+                            base_dataset.get("organization")
+                            or f"Ministry of {sector_label(normalized_sector)}"
+                        ).strip(),
+                        "publishedDate": normalize_date(row.get("Published Date") or base_dataset.get("publishedDate")),
+                        "updatedDate": normalize_date(base_dataset.get("updatedDate") or row.get("Published Date")),
+                        "state": str(base_dataset.get("state") or summary_title_state(title)).strip(),
+                        "sector": sector_label(normalized_sector),
+                        "sectorKey": normalized_sector,
+                        "category": str(base_dataset.get("category") or sector_label(normalized_sector)).strip(),
+                        "datasetCount": safe_int(row.get("Number of Rows"), safe_int(base_dataset.get("datasetCount"))),
+                        "apiCount": safe_int(base_dataset.get("apiCount"), 1),
+                    }
+                )
+                seen_ids.add(resource_id)
+    except OSError:
+        return base_datasets
+
+    for dataset in base_datasets:
+        resource_id = str(dataset.get("id") or "").strip()
+        if not resource_id or resource_id in seen_ids:
+            continue
+        merged.append(dataset)
+        seen_ids.add(resource_id)
+
+    return merged
+
+
+def sector_page_from_catalog(
+    sector_key: str,
+    *,
+    page: int = 1,
+    limit: int = CATALOG_PAGE_SIZE,
+    source: str = "local_fallback",
+    warning: str | None = None,
+) -> dict[str, Any]:
+    normalized_sector = normalize_sector_key(sector_key)
+    datasets = [enrich_dataset(dataset) for dataset in sector_catalog_datasets(normalized_sector)]
     total = len(datasets)
     bounded_page = max(page, 1)
     bounded_limit = max(limit, 1)
@@ -834,9 +926,19 @@ def local_sector_page(sector_key: str, *, page: int = 1, limit: int = CATALOG_PA
         "limit": bounded_limit,
         "totalDatasets": total,
         "totalPages": max(1, math.ceil(total / bounded_limit)) if total else 0,
-        "source": "local_fallback",
-        "warning": "Using fallback sector catalog because the live metadata API is unavailable.",
+        "source": source,
+        "warning": warning,
     }
+
+
+def local_sector_page(sector_key: str, *, page: int = 1, limit: int = CATALOG_PAGE_SIZE) -> dict[str, Any]:
+    return sector_page_from_catalog(
+        sector_key,
+        page=page,
+        limit=limit,
+        source="local_fallback",
+        warning="Using fallback sector catalog because the live metadata API is unavailable.",
+    )
 
 
 def read_trackers() -> dict[str, dict[str, int]]:
@@ -1037,7 +1139,7 @@ def increment_tracker(sector_key: str, resource_id: str, field: str) -> dict[str
 def get_catalog_dataset(sector_key: str, resource_id: str) -> dict[str, Any] | None:
     normalized_sector = normalize_sector_key(sector_key)
     normalized_id = str(resource_id).replace(".csv", "")
-    for dataset in load_catalogs().get(normalized_sector, []):
+    for dataset in sector_catalog_datasets(normalized_sector):
         if dataset["id"] == normalized_id:
             return dataset
     return None
@@ -1116,8 +1218,8 @@ def extract_state_from_tags(tags: list[str], organization: str, *extra_texts: An
 
 def get_dataset_by_id(resource_id: str) -> tuple[str | None, dict[str, Any] | None]:
     normalized_id = str(resource_id).replace(".csv", "")
-    catalogs = load_catalogs()
-    for sector_key, items in catalogs.items():
+    for sector_key in sector_keys():
+        items = sector_catalog_datasets(sector_key)
         for dataset in items:
             if dataset["id"] == normalized_id:
                 return sector_key, dataset
@@ -1224,8 +1326,20 @@ def fetch_sector_api_page(sector_key: str, *, page: int = 1, limit: int = CATALO
     bounded_limit = max(limit, 1)
     cache_key = (normalized_sector, bounded_page, bounded_limit)
     cached_response = _sector_page_cache.get(cache_key)
-    if cached_response and cached_response.get("source") == "api":
+    if cached_response and cached_response.get("source") in {"api", "summary_catalog"}:
         return _sector_page_cache[cache_key]
+
+    if sector_uses_summary_catalog(normalized_sector):
+        response = sector_page_from_catalog(
+            normalized_sector,
+            page=bounded_page,
+            limit=bounded_limit,
+            source="summary_catalog",
+            warning=None,
+        )
+        _sector_page_cache[cache_key] = response
+        _sector_total_cache[normalized_sector] = safe_int(response.get("totalDatasets"))
+        return response
 
     params = {
         "api-key": API_KEY,
@@ -1359,7 +1473,7 @@ def search_datasets(query: str, sector_key: str | None = None) -> list[dict[str,
     scored_results: dict[str, tuple[int, dict[str, Any]]] = {}
 
     for key in sectors_to_search:
-        local_datasets = [enrich_dataset(dataset) for dataset in load_catalogs().get(key, [])]
+        local_datasets = [enrich_dataset(dataset) for dataset in sector_catalog_datasets(key)]
         api_preview = fetch_sector_api_page(key, page=1, limit=50).get("datasets", [])
         for dataset in [*api_preview, *local_datasets]:
             score = search_relevance_score(dataset, query_text, query_terms, domain_filters)
@@ -1619,7 +1733,7 @@ def write_sector_summary_from_local_catalog(sector_key: str) -> dict[str, Any]:
         writer = csv.DictWriter(csv_file, fieldnames=SUMMARY_COLUMNS)
         writer.writeheader()
         with ThreadPoolExecutor(max_workers=SUMMARY_METADATA_WORKERS) as executor:
-            datasets = load_catalogs().get(normalized_sector, [])
+            datasets = sector_catalog_datasets(normalized_sector)
             count = write_summary_rows_batch(writer, datasets, start_serial=1, executor=executor)
 
     temp_target.replace(target)

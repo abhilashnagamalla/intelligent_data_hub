@@ -68,7 +68,7 @@ export default function Sidebar({ open, onClose }) {
       <div
         className={`
           hidden lg:flex flex-col h-screen bg-gradient-to-b from-gray-900 to-black
-          text-white shadow-2xl border-r border-gray-800
+          text-white shadow-2xl border-r-2 border-black
           transition-all duration-300
           ${collapsed ? 'w-20' : 'w-64 xl:w-72'}
         `}
@@ -90,7 +90,7 @@ export default function Sidebar({ open, onClose }) {
         className={`
           fixed inset-y-0 left-0 z-50 flex flex-col
           w-72 bg-gradient-to-b from-gray-900 to-black
-          text-white shadow-2xl border-r border-gray-800
+          text-white shadow-2xl border-r-2 border-black
           transition-transform duration-300 ease-in-out
           lg:hidden
           ${open ? 'translate-x-0' : '-translate-x-full'}
@@ -115,7 +115,7 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
   return (
     <>
       {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-gray-800 flex items-center gap-3 flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center gap-3 border-b-2 border-black p-4 sm:p-6">
         {showClose ? (
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-800 transition-colors">
             <X className="w-5 h-5" />
@@ -141,9 +141,9 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
       <nav className="flex-1 p-3 sm:p-4 space-y-1 overflow-y-auto">
         <button
           onClick={() => handleNav('/dashboard')}
-          className={`w-full flex items-center gap-3 p-3 sm:p-4 rounded-2xl transition-all group hover:bg-primary/20 ${
+          className={`w-full flex items-center gap-3 rounded-2xl border-2 border-black p-3 sm:p-4 transition-all group hover:bg-primary/20 ${
             isActive('/dashboard') && !isActive('/chatbot')
-              ? 'bg-primary/30 border-r-4 border-primary shadow-glow font-semibold'
+              ? 'bg-primary/30 shadow-glow font-semibold'
               : 'hover:shadow-glow'
           }`}
         >
@@ -163,8 +163,8 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
               <button
                 key={domain.sector}
                 onClick={() => handleNav(`/domain/${domain.sector}`)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all group hover:bg-white/10 ${
-                  isActive(`/domain/${domain.sector}`) ? 'bg-primary/20 border-r-4 border-primary font-medium' : ''
+                className={`w-full flex items-center gap-3 rounded-xl border-2 border-black p-3 transition-all group hover:bg-white/10 ${
+                  isActive(`/domain/${domain.sector}`) ? 'bg-primary/20 font-medium' : ''
                 }`}
               >
                 <Icon className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 opacity-80 group-hover:opacity-100" />
@@ -185,8 +185,8 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
 
         <button
           onClick={() => handleNav('/dashboard/chatbot')}
-          className={`w-full flex items-center gap-3 p-3 sm:p-4 rounded-2xl transition-all group hover:bg-accent/20 ${
-            isActive('/chatbot') ? 'bg-accent/30 border-r-4 border-accent shadow-glow font-semibold' : 'hover:shadow-glow'
+          className={`w-full flex items-center gap-3 rounded-2xl border-2 border-black p-3 sm:p-4 transition-all group hover:bg-accent/20 ${
+            isActive('/chatbot') ? 'bg-accent/30 shadow-glow font-semibold' : 'hover:shadow-glow'
           }`}
         >
           <MessageCirclePlus className="w-5 sm:w-6 h-5 sm:h-6 flex-shrink-0" />
@@ -195,7 +195,7 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-800 flex-shrink-0">
+      <div className="flex-shrink-0 border-t-2 border-black p-4">
         <div className="text-xs text-gray-500 text-center">
           {!collapsed && 'v1.0.0'}
         </div>

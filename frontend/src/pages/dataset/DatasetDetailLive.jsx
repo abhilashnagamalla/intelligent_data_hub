@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, Eye, BarChart3, FileText, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Eye, BarChart3, FileText, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Loader2, Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DatasetMeta from '../../components/dataset/DatasetMeta';
@@ -126,6 +126,7 @@ export default function DatasetDetailLive() {
   const [pageError, setPageError] = useState('');
   const [vizState, setVizState] = useState({ loading: false, data: null, error: '' });
   const [downloading, setDownloading] = useState(false);
+  const [rawCopied, setRawCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,6 +230,7 @@ export default function DatasetDetailLive() {
     setPage(1);
     setPageData({ records: [], columns: [], totalRows: 0, totalPages: 1 });
     setPageError('');
+    setRawCopied(false);
   }, [dataset?.id, activeView]);
 
   useEffect(() => {
@@ -257,6 +259,29 @@ export default function DatasetDetailLive() {
   }, [dataset, sector, activeView, vizState.data, vizState.loading]);
 
   const csvPreview = useMemo(() => formatCsv(pageData.records, pageData.columns), [pageData]);
+
+  const handleCopyRaw = async () => {
+    const textToCopy = csvPreview || 'No data available.';
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.setAttribute('readonly', 'true');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setRawCopied(true);
+      window.setTimeout(() => setRawCopied(false), 1800);
+    } catch (copyError) {
+      console.error(copyError);
+    }
+  };
 
   const handleDownload = async () => {
     if (!dataset || !sector || downloading) return;
@@ -321,46 +346,57 @@ export default function DatasetDetailLive() {
       </motion.div>
 
       {/* Metadata */}
-      <section className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6">
+      <section className="rounded-3xl border-2 border-black bg-white dark:bg-gray-950 p-6">
         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Metadata')}</h2>
         <DatasetMeta dataset={dataset} />
       </section>
 
       {/* Stats Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
+        <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
           <div className="text-sm text-gray-500 mb-2">{t('Rows')}</div>
           <div className="text-2xl font-black text-gray-900 dark:text-white">{(stats?.rows || dataset.numberOfRows || 0).toLocaleString()}</div>
         </div>
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
+        <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
           <div className="text-sm text-gray-500 mb-2">{t('Columns')}</div>
           <div className="text-2xl font-black text-gray-900 dark:text-white">{stats?.columnCount || dataset.numberOfColumns || stats?.columns?.length || 0}</div>
         </div>
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
+        <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
           <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Eye className="w-4 h-4" />{t('Views')}</div>
           <div className="text-2xl font-black text-green-600">{(stats?.views ?? dataset.views ?? 0).toLocaleString()}</div>
         </div>
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-950">
+        <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
           <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Download className="w-4 h-4" />{t('Downloads')}</div>
           <div className="text-2xl font-black text-blue-600">{(stats?.downloads ?? dataset.downloads ?? 0).toLocaleString()}</div>
         </div>
       </section>
 
       {/* Data View Section */}
-      <section className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 space-y-6">
+      <section className="rounded-3xl border-2 border-black bg-white dark:bg-gray-950 p-6 space-y-6">
         {/* Action bar with tabs + download button */}
         <div className="flex flex-wrap items-center gap-3">
-          <button onClick={() => setActiveView('table')} className={`px-4 py-2 rounded-xl font-semibold text-sm ${activeView === 'table' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
+          <button onClick={() => setActiveView('table')} className={`rounded-xl border-2 border-black px-4 py-2 font-semibold text-sm ${activeView === 'table' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
             <FileText className="w-4 h-4 inline mr-2" />{t('View Details')}
           </button>
-          <button onClick={() => setActiveView('raw')} className={`px-4 py-2 rounded-xl font-semibold text-sm ${activeView === 'raw' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
+          <button onClick={() => setActiveView('raw')} className={`rounded-xl border-2 border-black px-4 py-2 font-semibold text-sm ${activeView === 'raw' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
             {t('Raw View')}
           </button>
-          <button onClick={() => setActiveView('viz')} className={`px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 ${activeView === 'viz' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
+          <button onClick={() => setActiveView('viz')} className={`flex items-center gap-2 rounded-xl border-2 border-black px-4 py-2 font-semibold text-sm ${activeView === 'viz' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
             <BarChart3 className="w-4 h-4" /> {t('Visualization')}
           </button>
+          {activeView === 'raw' && (
+            <button
+              onClick={handleCopyRaw}
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2 font-semibold text-sm text-gray-900 transition-colors hover:bg-gray-100 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900"
+              aria-label={rawCopied ? t('Copied') : t('Copy Link')}
+              title={rawCopied ? t('Copied') : t('Copy Link')}
+            >
+              {rawCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+          )}
           <div className="flex-1" />
-          <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-black text-white font-semibold text-sm disabled:opacity-50 hover:bg-gray-800 transition-colors">
+          <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-black px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-50">
             {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             {downloading ? t('Downloading...') : t('Download CSV')}
           </button>
@@ -372,18 +408,18 @@ export default function DatasetDetailLive() {
             {pageError && <div className="text-red-500">{pageError}</div>}
 
             {!pageLoading && !pageError && activeView === 'table' && (
-              <div className="overflow-auto border border-gray-200 dark:border-gray-800 rounded-2xl max-h-[640px]">
+              <div className="overflow-auto rounded-2xl border-2 border-black max-h-[640px]">
                 <table className="min-w-full text-sm">
                   <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900">
                     <tr>
                       {pageData.columns.map((column) => (
-                        <th key={column} className="px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-800 whitespace-nowrap">{column}</th>
+                        <th key={column} className="whitespace-nowrap border-b-2 border-black px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-200">{column}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {pageData.records.map((record, rowIndex) => (
-                      <tr key={rowIndex} className="border-b border-gray-100 dark:border-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                      <tr key={rowIndex} className="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/40">
                         {pageData.columns.map((column) => (
                           <td key={`${rowIndex}-${column}`} className="px-4 py-3 align-top text-gray-700 dark:text-gray-300 whitespace-nowrap">{String(record[column] ?? '')}</td>
                         ))}
@@ -395,7 +431,7 @@ export default function DatasetDetailLive() {
             )}
 
             {!pageLoading && !pageError && activeView === 'raw' && (
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-950 text-emerald-400 p-5 overflow-auto max-h-[640px]">
+              <div className="max-h-[640px] overflow-auto rounded-2xl border-2 border-black bg-gray-950 p-5 text-emerald-400">
                 <pre className="text-sm whitespace-pre-wrap">{csvPreview}</pre>
               </div>
             )}
