@@ -55,8 +55,69 @@ SEARCH_STOP_WORDS = {
 }
 
 DOMAIN_KEYWORDS = {
-    "health": {"health", "healthcare", "hospital", "hospitals", "clinic", "clinics", "medical", "phc", "chc"},
+    "health": {
+        "health",
+        "healthcare",
+        "hospital",
+        "hospitals",
+        "clinic",
+        "clinics",
+        "medical",
+        "medicine",
+        "medicines",
+        "medicinal",
+        "drug",
+        "drugs",
+        "pharma",
+        "pharmacy",
+        "pharmaceutical",
+        "pharmaceuticals",
+        "phc",
+        "chc",
+    },
     "agriculture": {"agriculture", "agri", "crop", "crops", "fertilizer", "fertilizers", "farmer", "farmers"},
+    "education": {
+        "education",
+        "educational",
+        "school",
+        "schools",
+        "college",
+        "colleges",
+        "university",
+        "universities",
+        "higher",
+        "higher education",
+        "institute",
+        "institutes",
+        "institution",
+        "institutions",
+        "teacher",
+        "teachers",
+        "student",
+        "students",
+        "literacy",
+        "enrolment",
+        "enrollment",
+    },
+    "transport": {
+        "transport",
+        "transportation",
+        "traffic",
+        "vehicle",
+        "vehicles",
+        "road",
+        "roads",
+        "highway",
+        "highways",
+        "nh",
+        "toll",
+        "tolls",
+        "tolling",
+        "plaza",
+        "plazas",
+        "fare",
+        "fares",
+    },
     "finance": {"finance", "financial", "bank", "banks", "rbi", "loan", "loans"},
 }
 
@@ -378,12 +439,62 @@ def detect_query_domains(query_terms: list[str]) -> set[str]:
     return domains
 
 
-def dataset_search_text(dataset: dict[str, Any]) -> tuple[str, str, str]:
+def detect_query_states(query_text: str) -> set[str]:
+    detected: set[str] = set()
+    for alias, code in STATE_FILTER_ALIAS_LOOKUP:
+        if contains_normalized_phrase(query_text, alias):
+            detected.add(code)
+    return detected
+
+
+def removable_state_query_terms(state_codes: set[str]) -> set[str]:
+    removable_terms: set[str] = set()
+    for code in state_codes:
+        for alias in STATE_FILTER_ALIASES.get(code, set()):
+            removable_terms.update(alias.split())
+    return removable_terms
+
+
+def removable_sector_query_terms(domain_filters: set[str]) -> set[str]:
+    removable_terms: set[str] = set()
+    for sector_key in domain_filters:
+        for alias in SECTOR_ALIASES.get(sector_key, set()):
+            removable_terms.update(normalize_search_text(alias).split())
+    return removable_terms
+
+
+def required_query_terms(
+    query_terms: list[str],
+    state_codes: set[str],
+    domain_filters: set[str],
+) -> list[str]:
+    excluded_terms = removable_state_query_terms(state_codes) | removable_sector_query_terms(domain_filters)
+    return [term for term in query_terms if term not in excluded_terms]
+
+
+def dataset_search_text(dataset: dict[str, Any]) -> tuple[str, str, str, str, str, str]:
     title_text = normalize_search_text(dataset.get("title"))
     description_text = normalize_search_text(dataset.get("description"))
+    organization_text = normalize_search_text(dataset.get("organization"))
+    state_text = normalize_search_text(dataset.get("state"))
+    identifier_text = normalize_search_text(dataset.get("id"))
     tags = normalize_tag_list(dataset.get("tags"), dataset.get("category"), dataset.get("sector"))
     tags_text = normalize_search_text(" ".join(tags))
-    return title_text, description_text, tags_text
+    combined_text = normalize_search_text(
+        " ".join(
+            part
+            for part in (
+                title_text,
+                description_text,
+                organization_text,
+                state_text,
+                identifier_text,
+                tags_text,
+            )
+            if part
+        )
+    )
+    return title_text, description_text, organization_text, state_text, tags_text, combined_text
 
 
 def search_relevance_score(
@@ -391,42 +502,64 @@ def search_relevance_score(
     query_text: str,
     query_terms: list[str],
     domain_filters: set[str],
+    required_terms: list[str],
+    state_filters: set[str],
 ) -> int | None:
-    title_text, description_text, tags_text = dataset_search_text(dataset)
+    title_text, description_text, organization_text, state_text, tags_text, combined_text = dataset_search_text(dataset)
+
+    if domain_filters and dataset.get("sectorKey") not in domain_filters:
+        return None
+
+    if state_filters and not any(dataset_matches_state_filter(dataset, state_code) for state_code in state_filters):
+        return None
 
     exact_title = int(bool(query_text and query_text in title_text))
     exact_description = int(bool(query_text and query_text in description_text))
+    exact_organization = int(bool(query_text and query_text in organization_text))
+    exact_state = int(bool(query_text and query_text in state_text))
     exact_tags = int(bool(query_text and query_text in tags_text))
+    exact_combined = int(bool(query_text and query_text in combined_text))
 
     query_hits_title = keyword_occurrence_count(title_text, query_terms)
     query_hits_description = keyword_occurrence_count(description_text, query_terms)
+    query_hits_organization = keyword_occurrence_count(organization_text, query_terms)
+    query_hits_state = keyword_occurrence_count(state_text, query_terms)
     query_hits_tags = keyword_occurrence_count(tags_text, query_terms)
 
     domain_terms = sorted({keyword for domain in domain_filters for keyword in DOMAIN_KEYWORDS.get(domain, set())})
     domain_hits_title = keyword_occurrence_count(title_text, domain_terms)
     domain_hits_description = keyword_occurrence_count(description_text, domain_terms)
+    domain_hits_organization = keyword_occurrence_count(organization_text, domain_terms)
     domain_hits_tags = keyword_occurrence_count(tags_text, domain_terms)
 
-    query_total = query_hits_title + query_hits_description + query_hits_tags
-    domain_total = domain_hits_title + domain_hits_description + domain_hits_tags
-    exact_total = exact_title + exact_description + exact_tags
-
-    if domain_filters and dataset.get("sectorKey") not in domain_filters:
-        return None
+    required_total = keyword_occurrence_count(combined_text, required_terms)
+    query_total = query_hits_title + query_hits_description + query_hits_organization + query_hits_state + query_hits_tags
+    domain_total = domain_hits_title + domain_hits_description + domain_hits_organization + domain_hits_tags
+    exact_total = exact_title + exact_description + exact_organization + exact_state + exact_tags + exact_combined
 
     if exact_total == 0 and query_total == 0 and domain_total == 0:
+        return None
+
+    if required_terms and required_total == 0:
         return None
 
     return (
         exact_title * 1000
         + exact_description * 700
+        + exact_organization * 650
+        + exact_state * 650
         + exact_tags * 500
+        + exact_combined * 450
         + query_hits_title * 150
         + query_hits_description * 110
+        + query_hits_organization * 95
+        + query_hits_state * 85
         + query_hits_tags * 90
         + domain_hits_title * 35
         + domain_hits_description * 25
+        + domain_hits_organization * 20
         + domain_hits_tags * 20
+        + required_total * 240
     )
 
 
@@ -1424,36 +1557,46 @@ def fetch_all_sector_datasets(sector_key: str, *, max_batches: int = 4) -> list[
     return all_datasets
 
 
-def get_sector_datasets(sector_key: str, *, page: int = 1, limit: int = CATALOG_PAGE_SIZE, state_filter: str | None = None) -> dict[str, Any]:
-    """Fetch datasets for a sector, optionally filtered by state code (e.g., "UP", "KA", "DL")."""
+def get_sector_datasets(
+    sector_key: str,
+    *,
+    page: int = 1,
+    limit: int = CATALOG_PAGE_SIZE,
+    state_filter: str | None = None,
+) -> dict[str, Any]:
+    """Fetch datasets for a sector, optionally filtered by state."""
+    normalized_sector = normalize_sector_key(sector_key)
+    bounded_page = max(page, 1)
+    bounded_limit = max(limit, 1)
     normalized_state_filter = normalize_state_code(state_filter)
 
-    # When no state filter, use direct API pagination
-    if not normalized_state_filter or normalized_state_filter == "ALL":
-        return fetch_sector_api_page(sector_key, page=page, limit=limit)
+    has_state_filter = bool(normalized_state_filter and normalized_state_filter != "ALL")
 
-    # When state filter is applied, fetch multiple batches and filter
-    all_datasets = fetch_all_sector_datasets(sector_key)
+    if not has_state_filter:
+        return fetch_sector_api_page(normalized_sector, page=bounded_page, limit=bounded_limit)
 
-    # Match state-aware metadata as well as titles like "Telangana ..." within the chosen sector.
-    filtered_datasets = [dataset for dataset in all_datasets if dataset_matches_state_filter(dataset, normalized_state_filter)]
+    filtered_datasets = [
+        dataset
+        for dataset in sector_catalog_datasets(normalized_sector)
+        if dataset_matches_state_filter(dataset, normalized_state_filter)
+    ]
 
-    # Calculate pagination for filtered results
     total = len(filtered_datasets)
-    start_idx = (page - 1) * limit
-    end_idx = start_idx + limit
-    paginated_datasets = filtered_datasets[start_idx:end_idx]
+    start_idx = (bounded_page - 1) * bounded_limit
+    end_idx = start_idx + bounded_limit
+    paginated_datasets = [enrich_dataset(dataset) for dataset in filtered_datasets[start_idx:end_idx]]
 
     return {
-        "sector": sector_label(normalize_sector_key(sector_key)),
-        "sectorKey": normalize_sector_key(sector_key),
+        "sector": sector_label(normalized_sector),
+        "sectorKey": normalized_sector,
         "datasets": paginated_datasets,
-        "page": page,
-        "limit": limit,
+        "page": bounded_page,
+        "limit": bounded_limit,
         "totalDatasets": total,
-        "totalPages": max(1, math.ceil(total / limit)) if total else 0,
-        "source": "api",
-        "stateFilter": normalized_state_filter,
+        "totalPages": max(1, math.ceil(total / bounded_limit)) if total else 0,
+        "source": "filtered_catalog",
+        "warning": None,
+        "stateFilter": normalized_state_filter if has_state_filter else "ALL",
     }
 
 
@@ -1469,6 +1612,9 @@ def search_datasets(query: str, sector_key: str | None = None) -> list[dict[str,
 
     normalized_sector = normalize_sector_key(sector_key) if sector_key else None
     domain_filters = detect_query_domains(query_terms)
+    state_filters = detect_query_states(query_text)
+    effective_domain_filters = {normalized_sector} if normalized_sector else domain_filters
+    required_terms = required_query_terms(query_terms, state_filters, effective_domain_filters)
     sectors_to_search = [normalized_sector] if normalized_sector else sorted(domain_filters) or sector_keys()
     scored_results: dict[str, tuple[int, dict[str, Any]]] = {}
 
@@ -1476,7 +1622,14 @@ def search_datasets(query: str, sector_key: str | None = None) -> list[dict[str,
         local_datasets = [enrich_dataset(dataset) for dataset in sector_catalog_datasets(key)]
         api_preview = fetch_sector_api_page(key, page=1, limit=50).get("datasets", [])
         for dataset in [*api_preview, *local_datasets]:
-            score = search_relevance_score(dataset, query_text, query_terms, domain_filters)
+            score = search_relevance_score(
+                dataset,
+                query_text,
+                query_terms,
+                effective_domain_filters,
+                required_terms,
+                state_filters,
+            )
             if score is None:
                 continue
 
