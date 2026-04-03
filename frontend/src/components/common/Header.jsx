@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, LogIn, Menu, X, Loader2 } from 'lucide-react';
@@ -16,33 +16,54 @@ export default function Header({ onMenuToggle }) {
   const { t } = useTranslation();
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const searchAbortRef = useRef(null);
 
   // Optimized debounced search
   useEffect(() => {
-    if (searchQuery.length < 2) {
+    searchAbortRef.current?.abort();
+
+    if (searchQuery.trim().length < 2) {
       setFilteredResults([]);
+      setIsSearching(false);
       return;
     }
 
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await api.get(`/datasets/search?q=${encodeURIComponent(searchQuery)}`);
+        const res = await api.get('/datasets/search', {
+          params: { q: searchQuery.trim() },
+          signal: controller.signal,
+        });
         // Map backend items to have 'type' for categorization
         setFilteredResults(res.data.map(item => ({ ...item, type: 'dataset' })));
       } catch (err) {
+        if (err?.code === 'ERR_CANCELED' || controller.signal.aborted) return;
         console.error('Search failed', err);
       } finally {
-        setIsSearching(false);
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
       }
     }, 300); // 300ms debounce
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [searchQuery]);
 
-  const handleResultClick = (result) => {
+  const clearSearch = () => {
+    searchAbortRef.current?.abort();
     setSearchQuery('');
     setFilteredResults([]);
+    setIsSearching(false);
+  };
+
+  const handleResultClick = (result) => {
+    clearSearch();
     setSearchExpanded(false);
     
     if (result.type === 'domain') {
@@ -108,8 +129,19 @@ export default function Header({ onMenuToggle }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all shadow-sm hover:shadow-md text-sm"
+                className="w-full pl-11 pr-12 py-2.5 border border-gray-200 dark:border-gray-600 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all shadow-sm hover:shadow-md text-sm"
               />
+              {(searchQuery || isSearching) && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
+                  aria-label={t('Cancel search')}
+                  title={t('Clear search')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Search Results Dropdown */}
@@ -197,8 +229,19 @@ export default function Header({ onMenuToggle }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all shadow-sm text-sm"
+                className="w-full pl-11 pr-12 py-2.5 border border-gray-200 dark:border-gray-600 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all shadow-sm text-sm"
               />
+              {(searchQuery || isSearching) && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
+                  aria-label={t('Cancel search')}
+                  title={t('Clear search')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
             
             {/* Mobile Search Results */}

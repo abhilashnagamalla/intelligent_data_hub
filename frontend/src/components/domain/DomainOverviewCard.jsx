@@ -29,7 +29,7 @@ export default function DomainOverviewCard({ domain, onClick }) {
       type="button"
       whileHover={{ y: -4 }}
       onClick={onClick}
-      className="surface-card flex h-full w-full flex-col p-6 text-left"
+className="surface-card border-2 border-black flex h-full w-full flex-col p-6 text-left rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200"
     >
       <div className="flex items-start justify-between gap-4">
         <div>

@@ -153,34 +153,38 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
 
         {/* Removed All Datasets Button */}
 
-        <div className="space-y-1">
+        <div className="space-y-2">
           <div className="px-4 py-2 text-xs text-gray-500 uppercase font-semibold tracking-wider opacity-75">
             {!collapsed && t('Domains')}
           </div>
-          {domains.map((domain) => {
-            const Icon = domainIcons[domain.sector.toLowerCase()] || LayoutDashboard;
-            return (
-              <button
-                key={domain.sector}
-                onClick={() => handleNav(`/domain/${domain.sector}`)}
-                className={`w-full flex items-center gap-3 rounded-xl border-2 border-black p-3 transition-all group hover:bg-white/10 ${
-                  isActive(`/domain/${domain.sector}`) ? 'bg-primary/20 font-medium' : ''
-                }`}
-              >
-                <Icon className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 opacity-80 group-hover:opacity-100" />
-                {!collapsed && (
-                  <span className="truncate text-sm sm:text-base">
-                    {t(formatSectorLabel(domain.sector))}
-                  </span>
-                )}
-                {!collapsed && (
-                  <div className="ml-auto text-xs bg-white/10 px-2 py-1 rounded-full font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-                    {domain.datasets ?? '...'}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+          <div className="overflow-hidden rounded-2xl border-2 border-black bg-white/5">
+            {domains.map((domain, index) => {
+              const Icon = domainIcons[domain.sector.toLowerCase()] || LayoutDashboard;
+              return (
+                <button
+                  key={domain.sector}
+                  onClick={() => handleNav(`/domain/${domain.sector}`)}
+                  className={`w-full flex items-center gap-3 p-3 transition-all group hover:bg-white/10 ${
+                    index !== domains.length - 1 ? 'border-b border-white/20' : ''
+                  } ${
+                    isActive(`/domain/${domain.sector}`) ? 'bg-primary/20 font-medium' : ''
+                  }`}
+                >
+                  <Icon className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 opacity-80 group-hover:opacity-100" />
+                  {!collapsed && (
+                    <span className="truncate text-sm sm:text-base">
+                      {t(formatSectorLabel(domain.sector))}
+                    </span>
+                  )}
+                  {!collapsed && (
+                    <div className="ml-auto text-xs bg-white/10 px-2 py-1 rounded-full font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                      {domain.datasets ?? '...'}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <button

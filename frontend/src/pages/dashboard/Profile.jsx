@@ -4,10 +4,19 @@ import { AuthContext } from '../../context/AuthContext';
 import { User, BarChart3, Heart, Eye, Download, ExternalLink, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+const localeByLanguage = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  te: 'te-IN',
+  ta: 'ta-IN',
+  ml: 'ml-IN',
+  kn: 'kn-IN',
+};
+
 export default function Profile() {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('info');
   const [wishlist, setWishlist] = useState([]);
 
@@ -24,6 +33,7 @@ export default function Profile() {
   const downloadCounts = JSON.parse(localStorage.getItem('download_counts') || '{}');
   const totalDownloads = Object.values(downloadCounts).reduce((a, b) => a + b, 0);
   const memberSince = user.createdAt || user.lastLogin;
+  const activeLocale = localeByLanguage[i18n.resolvedLanguage] || 'en-IN';
 
   const removeFromWishlist = (datasetId) => {
     const key = `wishlist_${userId}`;
@@ -90,16 +100,16 @@ export default function Profile() {
             {/* User Details */}
             <div className="flex-1 space-y-4 text-center md:text-left">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white">{user.name || 'User'}</h2>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white">{user.name || t('User')}</h2>
                 <p className="text-gray-500 font-medium mt-1">{user.email}</p>
               </div>
 
               <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 <span className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-black uppercase tracking-widest">
-                  Active Researcher
+                  {t('Active Researcher')}
                 </span>
                 <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-full text-xs font-black uppercase tracking-widest">
-                  Verified
+                  {t('Verified')}
                 </span>
               </div>
 
@@ -107,7 +117,7 @@ export default function Profile() {
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
                   <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Member Since')}</div>
                   <div className="font-bold text-gray-900 dark:text-white">
-                    {memberSince ? new Date(memberSince).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'N/A'}
+                    {memberSince ? new Date(memberSince).toLocaleDateString(activeLocale, { year: 'numeric', month: 'long' }) : t('N/A')}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
@@ -131,7 +141,7 @@ export default function Profile() {
                 <h3 className="font-black text-xs uppercase tracking-widest text-gray-500">{t('Datasets Explored')}</h3>
               </div>
               <div className="text-4xl font-black text-emerald-600">{viewedDatasets.length}</div>
-              <p className="text-xs text-gray-400 mt-2">{t('Unique datasets you\'ve viewed')}</p>
+              <p className="text-xs text-gray-400 mt-2">{t("Unique datasets you've viewed")}</p>
             </div>
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-8 border-b-4 border-b-blue-500 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
@@ -141,7 +151,7 @@ export default function Profile() {
                 <h3 className="font-black text-xs uppercase tracking-widest text-gray-500">{t('Total Downloads')}</h3>
               </div>
               <div className="text-4xl font-black text-blue-600">{totalDownloads}</div>
-              <p className="text-xs text-gray-400 mt-2">{t('CSV files you\'ve downloaded')}</p>
+              <p className="text-xs text-gray-400 mt-2">{t("CSV files you've downloaded")}</p>
             </div>
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-8 border-b-4 border-b-indigo-500 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
@@ -186,10 +196,10 @@ export default function Profile() {
               {wishlist.map((item) => (
                 <div key={item.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col">
                   <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-2 mb-2">{item.title}</h3>
-                  <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">{item.description || 'No description available.'}</p>
+                  <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">{item.description || t('No description available.')}</p>
                   <div className="text-xs text-gray-400 mb-4">
                     {item.organization && <span>{item.organization}</span>}
-                    {item.addedAt && <span className="block mt-1">Saved {new Date(item.addedAt).toLocaleDateString()}</span>}
+                    {item.addedAt && <span className="block mt-1">{t('Saved on')} {new Date(item.addedAt).toLocaleDateString(activeLocale)}</span>}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -202,7 +212,7 @@ export default function Profile() {
                     <button
                       onClick={() => removeFromWishlist(item.id)}
                       className="px-3 py-2.5 rounded-xl border border-red-200 dark:border-red-900 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      title="Remove from wishlist"
+                      title={t('Remove from wishlist')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

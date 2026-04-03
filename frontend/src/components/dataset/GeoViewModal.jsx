@@ -76,7 +76,7 @@ export default function GeoViewModal({ isOpen, onClose, dataset, records = [], i
         </div>
 
         <div className="p-6 space-y-6">
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
+          <div className="rounded-2xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-4 backdrop-blur-sm">
             <div className="font-semibold text-gray-900 dark:text-white">{dataset?.title || 'Dataset'}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">No external maps, state files, or inferred joins are used here.</div>
           </div>
@@ -89,7 +89,7 @@ export default function GeoViewModal({ isOpen, onClose, dataset, records = [], i
 
           {!isLoading && geoData.type === 'coordinates' && (
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-950 overflow-x-auto">
+              <div className="rounded-2xl border border-[var(--border-subtle)]/30 p-4 bg-[var(--surface-muted)]/40 overflow-x-auto backdrop-blur-sm">
                 <div className="font-semibold mb-3 text-gray-900 dark:text-white">Coordinate Plot</div>
                 <svg viewBox="0 0 700 380" className="w-full min-h-[320px] bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
                   <line x1="40" y1="340" x2="660" y2="340" stroke="black" strokeWidth="2" />
@@ -103,11 +103,11 @@ export default function GeoViewModal({ isOpen, onClose, dataset, records = [], i
                 <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2"><Navigation className="w-4 h-4" />Using {geoData.latitude} and {geoData.longitude}</div>
               </div>
 
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-950">
+              <div className="rounded-2xl border border-[var(--border-subtle)]/30 p-4 bg-[var(--surface-muted)]/40 backdrop-blur-sm">
                 <div className="font-semibold mb-3 text-gray-900 dark:text-white">Sample Coordinates</div>
                 <div className="space-y-3 max-h-[360px] overflow-y-auto">
                   {coordinates.slice(0, 12).map((point, index) => (
-                    <div key={`${point.label}-${index}`} className="rounded-xl border border-gray-200 dark:border-gray-800 p-3 text-sm">
+                    <div key={`${point.label}-${index}`} className="rounded-xl border border-[var(--border-subtle)]/30 p-3 text-sm">
                       <div className="font-medium text-gray-900 dark:text-white">{point.label}</div>
                       <div className="text-gray-500 dark:text-gray-400">Lat: {point.latitude}</div>
                       <div className="text-gray-500 dark:text-gray-400">Lng: {point.longitude}</div>
@@ -119,7 +119,7 @@ export default function GeoViewModal({ isOpen, onClose, dataset, records = [], i
           )}
 
           {!isLoading && geoData.type === 'groups' && (
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-950">
+            <div className="rounded-2xl border border-[var(--border-subtle)]/30 p-4 bg-[var(--surface-muted)]/40 backdrop-blur-sm">
               <div className="font-semibold mb-4 text-gray-900 dark:text-white">Location Distribution by {geoData.locationColumn}</div>
               <div className="space-y-3">
                 {geoData.groups.map((group) => (
@@ -138,7 +138,7 @@ export default function GeoViewModal({ isOpen, onClose, dataset, records = [], i
           )}
 
           {!isLoading && (geoData.type === 'none' || geoData.type === 'empty') && (
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-10 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-950">
+            <div className="rounded-2xl border border-[var(--border-subtle)]/30 p-10 text-center text-gray-500 dark:text-gray-400 bg-[var(--surface-muted)]/40 backdrop-blur-sm">
               Geo View is only available when the dataset itself contains coordinates or explicit geographic fields.
             </div>
           )}

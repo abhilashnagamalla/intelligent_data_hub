@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { HeartPulse, GraduationCap, Truck, Apple, FileBarChart, DollarSign, Database, Library, Download, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -77,10 +76,10 @@ export default function DomainCard({ domain, onClick }) {
       whileHover={{ y: -2, boxShadow: '0 20px 25px -5px rgba(0, 0,0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}
       transition={{ duration: 0.2 }}
       onClick={onClick}
-      className="group cursor-pointer bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-gray-200/50 dark:border-gray-600/50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 h-full flex flex-col hover:border-gray-300 dark:hover:border-gray-500"
+      className="group cursor-pointer bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-[var(--border-subtle)]/30 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 h-full flex flex-col hover:border-[var(--border-subtle)]/50"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200/50">
+      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-[var(--border-subtle)]/30">
         <div className={`p-2.5 rounded-lg ${config.color} bg-opacity-10 border`}>
           <Icon className="w-5 h-5" />
         </div>
@@ -147,3 +146,4 @@ export default function DomainCard({ domain, onClick }) {
     </motion.div>
   );
 }
+

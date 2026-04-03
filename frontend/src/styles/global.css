@@ -24,8 +24,8 @@
     --surface-contrast: #020617;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
-    --border-subtle: #000000;
-    --border-strong: #000000;
+    --border-subtle: #e2e8f0;
+    --border-strong: #f8fafc;
     --brand-primary: #60a5fa;
     --brand-secondary: #93c5fd;
     --shadow-panel: 0 18px 40px rgba(0, 0, 0, 0.28);
@@ -78,6 +78,29 @@
 
   .dark .glass {
     background: rgba(30, 41, 59, 0.6);
-    border: 2px solid #000;
+    border: 2px solid var(--border-strong);
+  }
+
+  .dark .border-black {
+    border-color: var(--border-strong) !important;
+  }
+
+  .dark .bg-black {
+    background-color: #f8fafc !important;
+    color: #020617 !important;
+  }
+
+  .dark .text-black {
+    color: var(--text-primary) !important;
+  }
+
+  .dark .hover\:border-black:hover,
+  .dark .focus\:border-black:focus {
+    border-color: var(--border-strong) !important;
+  }
+
+  .dark .hover\:bg-gray-800:hover {
+    background-color: #e2e8f0 !important;
+    color: #020617 !important;
   }
 }

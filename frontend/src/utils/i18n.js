@@ -688,6 +688,198 @@ const resources = {
   }
 };
 
+const translationOverrides = {
+  en: {
+    Profile: 'Profile',
+    'My Profile': 'My Profile',
+    'User Info': 'User Info',
+    Analytics: 'Analytics',
+    Wishlist: 'Wishlist',
+    User: 'User',
+    'Active Researcher': 'Active Researcher',
+    Verified: 'Verified',
+    'Member Since': 'Member Since',
+    datasets: 'datasets',
+    "Unique datasets you've viewed": "Unique datasets you've viewed",
+    "CSV files you've downloaded": "CSV files you've downloaded",
+    'Wishlist Items': 'Wishlist Items',
+    'Datasets saved for later': 'Datasets saved for later',
+    'Account Status': 'Account Status',
+    'Fully Synced': 'Fully Synced',
+    'All data is up to date': 'All data is up to date',
+    'Browse Datasets': 'Browse Datasets',
+    'Remove from wishlist': 'Remove from wishlist',
+    'No description available.': 'No description available.',
+    'Saved on': 'Saved on',
+    'Clear search': 'Clear search',
+    'Cancel search': 'Cancel search'
+  },
+  hi: {
+    Profile: 'प्रोफ़ाइल',
+    'My Profile': 'मेरा प्रोफ़ाइल',
+    'User Info': 'उपयोगकर्ता जानकारी',
+    Analytics: 'एनालिटिक्स',
+    Wishlist: 'विशलिस्ट',
+    User: 'उपयोगकर्ता',
+    'Active Researcher': 'सक्रिय शोधकर्ता',
+    Verified: 'सत्यापित',
+    'Member Since': 'सदस्य तब से',
+    datasets: 'डेटासेट',
+    "Unique datasets you've viewed": 'आपके द्वारा देखे गए अलग डेटासेट',
+    "CSV files you've downloaded": 'आपके द्वारा डाउनलोड की गई CSV फ़ाइलें',
+    'Wishlist Items': 'विशलिस्ट आइटम',
+    'Datasets saved for later': 'बाद के लिए सहेजे गए डेटासेट',
+    'Account Status': 'खाता स्थिति',
+    'Fully Synced': 'पूरी तरह सिंक',
+    'All data is up to date': 'सारा डेटा अद्यतन है',
+    'Browse Datasets': 'डेटासेट ब्राउज़ करें',
+    'Remove from wishlist': 'विशलिस्ट से हटाएँ',
+    'No description available.': 'कोई विवरण उपलब्ध नहीं है।',
+    'Saved on': 'सहेजा गया',
+    'Clear search': 'खोज साफ़ करें',
+    'Cancel search': 'खोज रद्द करें'
+  },
+  te: {
+    Profile: 'ప్రొఫైల్',
+    'My Profile': 'నా ప్రొఫైల్',
+    'User Info': 'వినియోగదారు సమాచారం',
+    Analytics: 'విశ్లేషణలు',
+    Wishlist: 'విష్‌లిస్ట్',
+    User: 'వినియోగదారు',
+    'Active Researcher': 'సక్రియ పరిశోధకుడు',
+    Verified: 'ధృవీకరించబడింది',
+    'Member Since': 'సభ్యత్వం ప్రారంభం',
+    datasets: 'డేటాసెట్‌లు',
+    "Unique datasets you've viewed": 'మీరు చూసిన ప్రత్యేక డేటాసెట్‌లు',
+    "CSV files you've downloaded": 'మీరు డౌన్‌లోడ్ చేసిన CSV ఫైళ్లు',
+    'Wishlist Items': 'విష్‌లిస్ట్ అంశాలు',
+    'Datasets saved for later': 'తర్వాత కోసం సేవ్ చేసిన డేటాసెట్‌లు',
+    'Account Status': 'ఖాతా స్థితి',
+    'Fully Synced': 'పూర్తిగా సింక్ అయింది',
+    'All data is up to date': 'అన్ని డేటా తాజాగా ఉన్నాయి',
+    'Browse Datasets': 'డేటాసెట్‌లు బ్రౌజ్ చేయండి',
+    'Remove from wishlist': 'విష్‌లిస్ట్ నుండి తొలగించండి',
+    'No description available.': 'వివరణ అందుబాటులో లేదు.',
+    'Saved on': 'సేవ్ చేసిన తేదీ',
+    'Clear search': 'శోధన క్లియర్ చేయండి',
+    'Cancel search': 'శోధన రద్దు చేయండి'
+  },
+  ta: {
+    Profile: 'சுயவிவரம்',
+    'My Profile': 'என் சுயவிவரம்',
+    'User Info': 'பயனர் தகவல்',
+    Analytics: 'பகுப்பாய்வு',
+    Wishlist: 'விருப்பப்பட்டியல்',
+    User: 'பயனர்',
+    'Active Researcher': 'செயலில் உள்ள ஆய்வாளர்',
+    Verified: 'சரிபார்க்கப்பட்டது',
+    'Member Since': 'உறுப்பினர் ஆன தேதி',
+    datasets: 'தரவுத்தொகுப்புகள்',
+    "Unique datasets you've viewed": 'நீங்கள் பார்த்த தனித்த தரவுத்தொகுப்புகள்',
+    "CSV files you've downloaded": 'நீங்கள் பதிவிறக்கிய CSV கோப்புகள்',
+    'Wishlist Items': 'விருப்பப்பட்டியல் உருப்படிகள்',
+    'Datasets saved for later': 'பின்னர் சேமித்த தரவுத்தொகுப்புகள்',
+    'Account Status': 'கணக்கு நிலை',
+    'Fully Synced': 'முழுமையாக ஒத்திசைக்கப்பட்டது',
+    'All data is up to date': 'அனைத்து தரவும் புதுப்பித்ததாக உள்ளது',
+    'Browse Datasets': 'தரவுத்தொகுப்புகளை பார்வையிடு',
+    'Remove from wishlist': 'விருப்பப்பட்டியலிலிருந்து நீக்கு',
+    'No description available.': 'விளக்கம் கிடைக்கவில்லை.',
+    'Saved on': 'சேமித்த தேதி',
+    'Clear search': 'தேடலை அழிக்கவும்',
+    'Cancel search': 'தேடலை ரத்து செய்யவும்'
+  },
+  ml: {
+    Profile: 'പ്രൊഫൈൽ',
+    'My Profile': 'എന്റെ പ്രൊഫൈൽ',
+    'User Info': 'ഉപയോക്തൃ വിവരം',
+    Analytics: 'അനലിറ്റിക്സ്',
+    Wishlist: 'വിഷ്‌ലിസ്റ്റ്',
+    User: 'ഉപയോക്താവ്',
+    'Active Researcher': 'സജീവ ഗവേഷകൻ',
+    Verified: 'സ്ഥിരീകരിച്ചു',
+    'Member Since': 'അംഗമായത്',
+    datasets: 'ഡാറ്റാസെറ്റുകൾ',
+    "Unique datasets you've viewed": 'നിങ്ങൾ കണ്ട വ്യത്യസ്ത ഡാറ്റാസെറ്റുകൾ',
+    "CSV files you've downloaded": 'നിങ്ങൾ ഡൗൺലോഡ് ചെയ്ത CSV ഫയലുകൾ',
+    'Wishlist Items': 'വിഷ്‌ലിസ്റ്റ് ഇനങ്ങൾ',
+    'Datasets saved for later': 'പിന്നീട് വേണ്ടിയുള്ള സംരക്ഷിച്ച ഡാറ്റാസെറ്റുകൾ',
+    'Account Status': 'അക്കൗണ്ട് നില',
+    'Fully Synced': 'പൂർണ്ണമായി സമന്വയിപ്പിച്ചു',
+    'All data is up to date': 'എല്ലാ ഡാറ്റയും പുതുക്കിയതാണ്',
+    'Browse Datasets': 'ഡാറ്റാസെറ്റുകൾ ബ്രൗസ് ചെയ്യുക',
+    'Remove from wishlist': 'വിഷ്‌ലിസ്റ്റിൽ നിന്ന് നീക്കുക',
+    'No description available.': 'വിവരണം ലഭ്യമല്ല.',
+    'Saved on': 'സംരക്ഷിച്ച തീയതി',
+    'Clear search': 'തിരച്ചിൽ മായ്ക്കുക',
+    'Cancel search': 'തിരച്ചിൽ റദ്ദാക്കുക'
+  },
+  kn: {
+    Profile: 'ಪ್ರೊಫೈಲ್',
+    'My Profile': 'ನನ್ನ ಪ್ರೊಫೈಲ್',
+    'User Info': 'ಬಳಕೆದಾರ ಮಾಹಿತಿ',
+    Analytics: 'ವಿಶ್ಲೇಷಣೆಗಳು',
+    Wishlist: 'ವಿಶ್‌ಲಿಸ್ಟ್',
+    User: 'ಬಳಕೆದಾರ',
+    'Active Researcher': 'ಸಕ್ರಿಯ ಸಂಶೋಧಕ',
+    Verified: 'ದೃಢೀಕರಿಸಲಾಗಿದೆ',
+    'Member Since': 'ಸದಸ್ಯರಾಗಿದ್ದು',
+    datasets: 'ಡೇಟಾಸೆಟ್‌ಗಳು',
+    "Unique datasets you've viewed": 'ನೀವು ನೋಡಿದ ವಿಶಿಷ್ಟ ಡೇಟಾಸೆಟ್‌ಗಳು',
+    "CSV files you've downloaded": 'ನೀವು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿದ CSV ಕಡತಗಳು',
+    'Wishlist Items': 'ವಿಶ್‌ಲಿಸ್ಟ್ ಅಂಶಗಳು',
+    'Datasets saved for later': 'ನಂತರಕ್ಕಾಗಿ ಉಳಿಸಿದ ಡೇಟಾಸೆಟ್‌ಗಳು',
+    'Account Status': 'ಖಾತೆ ಸ್ಥಿತಿ',
+    'Fully Synced': 'ಸಂಪೂರ್ಣವಾಗಿ ಸಿಂಕ್ ಆಗಿದೆ',
+    'All data is up to date': 'ಎಲ್ಲಾ ಡೇಟಾ ನವೀಕೃತವಾಗಿದೆ',
+    'Browse Datasets': 'ಡೇಟಾಸೆಟ್‌ಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ',
+    'Remove from wishlist': 'ವಿಶ್‌ಲಿಸ್ಟ್‌ನಿಂದ ತೆಗೆದುಹಾಕಿ',
+    'No description available.': 'ವಿವರಣೆ ಲಭ್ಯವಿಲ್ಲ.',
+    'Saved on': 'ಉಳಿಸಿದ ದಿನಾಂಕ',
+    'Clear search': 'ಹುಡುಕಾಟ ತೆರವುಗೊಳಿಸಿ',
+    'Cancel search': 'ಹುಡುಕಾಟ ರದ್ದುಮಾಡಿ'
+  }
+};
+
+const dateFilterOverrides = {
+  en: {
+    'All Dates': 'All Dates',
+    'Before': 'Before',
+    'After': 'After',
+    'On': 'On'
+  },
+  hi: {
+    'All Dates': 'सभी तिथियाँ',
+    'Before': 'से पहले',
+    'After': 'के बाद',
+    'On': 'पर'
+  },
+  te: {
+    'All Dates': 'అన్ని తేదీలు',
+    'Before': 'కన్నా ముందు',
+    'After': 'తర్వాత',
+    'On': 'అదే నెలలో'
+  },
+  ta: {
+    'All Dates': 'அனைத்து தேதிகள்',
+    'Before': 'முன்பு',
+    'After': 'பிறகு',
+    'On': 'அதே மாதத்தில்'
+  },
+  ml: {
+    'All Dates': 'എല്ലാ തീയതികളും',
+    'Before': 'മുമ്പ്',
+    'After': 'ശേഷം',
+    'On': 'അതേ മാസത്തിൽ'
+  },
+  kn: {
+    'All Dates': 'ಎಲ್ಲಾ ದಿನಾಂಕಗಳು',
+    'Before': 'ಮೊದಲು',
+    'After': 'ನಂತರ',
+    'On': 'ಅದೇ ತಿಂಗಳಲ್ಲಿ'
+  }
+};
+
 i18n
   .use(initReactI18next)
   .init({
@@ -698,5 +890,19 @@ i18n
       escapeValue: false
     }
   });
+
+Object.entries(translationOverrides).forEach(([language, values]) => {
+  i18n.addResources(language, 'translation', values);
+});
+
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = i18n.language || 'en';
+}
+
+i18n.on('languageChanged', (language) => {
+  if (typeof window !== 'undefined') {
+    document.documentElement.lang = language;
+  }
+});
 
 export default i18n;

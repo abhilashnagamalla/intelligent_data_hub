@@ -62,15 +62,6 @@ export default function DataPreviewModal({ open, onClose, resource, content, vie
           <button onClick={() => setViewMode('raw')} className={`rounded-lg border-2 border-black px-4 py-2 text-sm font-semibold ${viewMode === 'raw' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100'}`}>
             Raw View
           </button>
-          {viewMode === 'raw' && (
-            <button
-              onClick={handleCopy}
-              className="ml-auto rounded-lg border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-gray-900 dark:bg-gray-900 dark:text-white"
-              title={copied ? 'Copied' : 'Copy'}
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </button>
-          )}
         </div>
 
         <div className="h-full overflow-auto p-5 bg-white dark:bg-gray-900">
@@ -100,9 +91,22 @@ export default function DataPreviewModal({ open, onClose, resource, content, vie
               <div className="text-center text-gray-500">No structured rows available for preview.</div>
             )
           ) : (
-            <pre className="whitespace-pre-wrap break-words max-h-[70vh] overflow-auto bg-slate-950 text-slate-100 p-4 rounded-xl text-xs">
-              {content || 'No raw content available.'}
-            </pre>
+            <div className="rounded-xl border-2 border-black bg-slate-950">
+              <div className="flex justify-end px-4 pt-4">
+                <button
+                  onClick={handleCopy}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white text-gray-900 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800"
+                  title={copied ? 'Copied' : 'Copy'}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="max-h-[70vh] overflow-auto px-4 pb-4 pt-2">
+                <pre className="whitespace-pre-wrap break-words text-xs text-slate-100">
+                  {content || 'No raw content available.'}
+                </pre>
+              </div>
+            </div>
           )}
         </div>
       </motion.div>

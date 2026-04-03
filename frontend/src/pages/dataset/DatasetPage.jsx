@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Search, ArrowLeft, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ArrowLeft, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import CatalogCard from '../../components/dataset/CatalogCard';
 import { formatSectorLabel } from '../../constants/sectors';
@@ -85,6 +86,7 @@ function Pagination({ page, totalPages, onPageChange }) {
 export default function DatasetPage() {
   const { domain } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [datasets, setDatasets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,6 +95,7 @@ export default function DatasetPage() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [totalPages, setTotalPages] = useState(1);
   const [totalDatasets, setTotalDatasets] = useState(0);
+  const requestAbortRef = useRef(null);
 
   const currentPage = Number(searchParams.get('page') || 1);
   const activeSearch = (searchParams.get('q') || searchQuery || '').trim();
@@ -101,6 +104,9 @@ export default function DatasetPage() {
 
   useEffect(() => {
     let cancelled = false;
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
 
     async function load() {
       setLoading(true);
@@ -108,7 +114,10 @@ export default function DatasetPage() {
       setWarning('');
       try {
         if (activeSearch) {
-          const response = await api.get('/datasets/search', { params: { q: activeSearch, sector: domain || undefined } });
+          const response = await api.get('/datasets/search', {
+            params: { q: activeSearch, sector: domain || undefined },
+            signal: controller.signal,
+          });
           if (!cancelled) {
             const results = response.data || [];
             setDatasets(results);
@@ -116,7 +125,10 @@ export default function DatasetPage() {
             setTotalPages(Math.max(1, Math.ceil(results.length / ITEMS_PER_PAGE)));
           }
         } else if (normalizedSector) {
-          const response = await api.get(`/datasets/${normalizedSector}`, { params: { page: currentPage, limit: ITEMS_PER_PAGE } });
+          const response = await api.get(`/datasets/${normalizedSector}`, {
+            params: { page: currentPage, limit: ITEMS_PER_PAGE },
+            signal: controller.signal,
+          });
           if (!cancelled) {
             setDatasets(response.data?.datasets || []);
             setTotalDatasets(response.data?.totalDatasets || 0);
@@ -124,7 +136,10 @@ export default function DatasetPage() {
             setWarning(response.data?.warning || '');
           }
         } else {
-          const response = await api.get('/datasets/all', { params: { limit: 12 } });
+          const response = await api.get('/datasets/all', {
+            params: { limit: 12 },
+            signal: controller.signal,
+          });
           if (!cancelled) {
             const sectorPages = Object.values(response.data || {});
             const flattened = sectorPages.flatMap((payload) => payload.datasets || []);
@@ -134,16 +149,18 @@ export default function DatasetPage() {
           }
         }
       } catch (loadError) {
+        if (loadError?.code === 'ERR_CANCELED' || controller.signal.aborted) return;
         console.error(loadError);
         if (!cancelled) setError(apiErrorMessage(loadError, 'Failed to load datasets.'));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !controller.signal.aborted) setLoading(false);
       }
     }
 
     load();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [activeSearch, normalizedSector, domain, currentPage]);
 
@@ -153,6 +170,12 @@ export default function DatasetPage() {
     if (activeSearch) nextParams.q = activeSearch;
     if (next > 1) nextParams.page = String(next);
     setSearchParams(nextParams);
+  };
+
+  const clearSearch = () => {
+    requestAbortRef.current?.abort();
+    setSearchQuery('');
+    setSearchParams({});
   };
 
   return (
@@ -182,17 +205,28 @@ export default function DatasetPage() {
               setSearchParams(nextParams);
             }
           }}
-          placeholder="Search datasets by title, description, organization, or resource ID"
-          className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-white"
+          placeholder={t('Search datasets by title, description, organization, or resource ID')}
+          className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-white"
         />
+        {(searchQuery || activeSearch) && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
+            aria-label={t('Cancel search')}
+            title={t('Clear search')}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {warning && <div className="rounded-2xl border border-amber-300 bg-amber-50 text-amber-800 px-4 py-3 text-sm">{warning}</div>}
-      {loading && <div className="text-gray-500">Loading datasets...</div>}
+      {loading && <div className="text-gray-500">{t('Loading datasets...')}</div>}
       {error && <div className="text-red-500">{error}</div>}
 
       {!loading && !error && visibleDatasets.length === 0 && (
-        <div className="rounded-3xl border border-gray-200 dark:border-gray-800 p-10 text-center text-gray-500">No datasets found.</div>
+        <div className="rounded-3xl border border-gray-200 dark:border-gray-800 p-10 text-center text-gray-500">{t('No datasets found.')}</div>
       )}
 
       {!loading && !error && visibleDatasets.length > 0 && (

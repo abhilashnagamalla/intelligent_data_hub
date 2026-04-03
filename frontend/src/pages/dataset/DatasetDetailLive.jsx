@@ -259,9 +259,10 @@ export default function DatasetDetailLive() {
   }, [dataset, sector, activeView, vizState.data, vizState.loading]);
 
   const csvPreview = useMemo(() => formatCsv(pageData.records, pageData.columns), [pageData]);
+  const rawPreviewText = csvPreview || 'No data available.';
 
   const handleCopyRaw = async () => {
-    const textToCopy = csvPreview || 'No data available.';
+    const textToCopy = rawPreviewText;
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(textToCopy);
@@ -384,17 +385,6 @@ export default function DatasetDetailLive() {
           <button onClick={() => setActiveView('viz')} className={`flex items-center gap-2 rounded-xl border-2 border-black px-4 py-2 font-semibold text-sm ${activeView === 'viz' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
             <BarChart3 className="w-4 h-4" /> {t('Visualization')}
           </button>
-          {activeView === 'raw' && (
-            <button
-              onClick={handleCopyRaw}
-              type="button"
-              className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2 font-semibold text-sm text-gray-900 transition-colors hover:bg-gray-100 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900"
-              aria-label={rawCopied ? t('Copied') : t('Copy Link')}
-              title={rawCopied ? t('Copied') : t('Copy Link')}
-            >
-              {rawCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </button>
-          )}
           <div className="flex-1" />
           <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-black px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-50">
             {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -431,8 +421,21 @@ export default function DatasetDetailLive() {
             )}
 
             {!pageLoading && !pageError && activeView === 'raw' && (
-              <div className="max-h-[640px] overflow-auto rounded-2xl border-2 border-black bg-gray-950 p-5 text-emerald-400">
-                <pre className="text-sm whitespace-pre-wrap">{csvPreview}</pre>
+              <div className="rounded-2xl border-2 border-black bg-gray-950">
+                <div className="flex justify-end px-4 pt-4">
+                  <button
+                    onClick={handleCopyRaw}
+                    type="button"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white text-gray-900 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800"
+                    aria-label={rawCopied ? t('Copied') : t('Copy')}
+                    title={rawCopied ? t('Copied') : t('Copy')}
+                  >
+                    {rawCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="max-h-[580px] overflow-auto px-5 pb-5 pt-3 text-emerald-400">
+                  <pre className="font-mono text-sm whitespace-pre-wrap break-words">{rawPreviewText}</pre>
+                </div>
               </div>
             )}
 

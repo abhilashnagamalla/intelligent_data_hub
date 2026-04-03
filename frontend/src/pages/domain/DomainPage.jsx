@@ -22,23 +22,34 @@ export default function DomainPage() {
   const [catalogError, setCatalogError] = useState('');
   const [page, setPage] = useState(1);
   const [warning, setWarning] = useState('');
-  const [selectedState, setSelectedState] = useState(allStatesOption.code);
+  const [selectedState, setSelectedState] = useState({
+    sectorKey: sector || '',
+    stateCode: allStatesOption.code,
+  });
 
   const title = formatSectorLabel(sector || '');
+  const activeStateCode = selectedState.sectorKey === (sector || '') ? selectedState.stateCode : allStatesOption.code;
   const languageCode = useMemo(
     () => (i18n.resolvedLanguage || i18n.language || 'en').split('-')[0],
     [i18n.language, i18n.resolvedLanguage],
   );
   const stateOptions = useMemo(() => [allStatesOption, ...indianStates], []);
-  const hasActiveStateFilter = selectedState !== allStatesOption.code;
+  const hasActiveStateFilter = activeStateCode !== allStatesOption.code;
   const selectedStateLabel = useMemo(
-    () => getStateName(selectedState, languageCode),
-    [languageCode, selectedState],
+    () => getStateName(activeStateCode, languageCode),
+    [activeStateCode, languageCode],
   );
 
   useEffect(() => {
     setPage(1);
-  }, [sector, selectedState]);
+  }, [activeStateCode, sector]);
+
+  useEffect(() => {
+    setSelectedState({
+      sectorKey: sector || '',
+      stateCode: allStatesOption.code,
+    });
+  }, [sector]);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,9 +62,8 @@ export default function DomainPage() {
       try {
         const params = { page, limit: ITEMS_PER_PAGE };
         if (hasActiveStateFilter) {
-          params.state = selectedState;
+          params.state = activeStateCode;
         }
-
         const response = await api.get(`/datasets/${sector}`, { params });
 
         if (cancelled) return;
@@ -84,7 +94,7 @@ export default function DomainPage() {
     return () => {
       cancelled = true;
     };
-  }, [hasActiveStateFilter, page, sector, selectedState]);
+  }, [activeStateCode, hasActiveStateFilter, page, sector]);
 
   const totalPages = Math.max(1, stats.catalogs || 0);
 
@@ -121,8 +131,11 @@ export default function DomainPage() {
 
             <div className="relative mt-3">
               <select
-                value={selectedState}
-                onChange={(event) => setSelectedState(event.target.value)}
+                value={activeStateCode}
+                onChange={(event) => setSelectedState({
+                  sectorKey: sector || '',
+                  stateCode: event.target.value,
+                })}
                 className="w-full appearance-none rounded-xl border-2 border-black bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-900 outline-none transition focus:border-black dark:bg-gray-900 dark:text-white"
               >
                 {stateOptions.map((state) => (

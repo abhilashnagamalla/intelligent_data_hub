@@ -87,7 +87,7 @@ export default function CatalogCardLive({ dataset, onView }) {
   return (
     <motion.div
       whileHover={{ y: -2 }}
-      className="bg-white dark:bg-gray-950 rounded-2xl p-6 shadow-md hover:shadow-xl border-2 border-black h-full flex flex-col relative"
+className="bg-white dark:bg-gray-950 rounded-2xl p-6 shadow-md hover:shadow-xl border-2 border-black h-full flex flex-col relative"
     >
       {/* Bookmark button only */}
       <div className="absolute top-4 right-4 z-10">
@@ -106,14 +106,14 @@ export default function CatalogCardLive({ dataset, onView }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-        <div className="rounded-xl border-2 border-black bg-gray-50 p-3 dark:bg-gray-900">
+        <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3">
           <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Published Date')}</div>
           <div className="font-semibold text-gray-900 dark:text-white">{formatDate(dataset.publishedDate)}</div>
         </div>
         <button
           type="button"
           onClick={handleGeoView}
-          className="rounded-xl border-2 border-black bg-gray-50 p-3 text-left transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800"
+          className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3 text-left transition-colors hover:bg-[var(--surface-muted)]/60"
         >
           <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Geo View')}</div>
           <div className="font-semibold text-emerald-600 flex items-center gap-2">
@@ -124,11 +124,11 @@ export default function CatalogCardLive({ dataset, onView }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6 text-sm">
-        <div className="rounded-xl border-2 border-black p-3">
+        <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3">
           <div className="flex items-center gap-2 text-gray-500 mb-1"><Eye className="w-4 h-4" />{t('Views')}</div>
           <div className="font-bold text-green-600 text-lg">{views.toLocaleString()}</div>
         </div>
-        <div className="rounded-xl border-2 border-black p-3">
+        <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3">
           <div className="flex items-center gap-2 text-gray-500 mb-1"><Download className="w-4 h-4" />{t('Downloads')}</div>
           <div className="font-bold text-blue-600 text-lg">{downloads.toLocaleString()}</div>
         </div>

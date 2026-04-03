@@ -89,25 +89,25 @@ export default function DatasetCatalogCard({ dataset }) {
       <div className="mt-5 text-sm text-muted">{dataset.organization || t("Government of India")}</div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <div className="surface-muted p-4">
+        <div className="rounded-lg border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-4">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Published Date")}</div>
           <div className="mt-2 font-semibold text-[var(--text-primary)]">{formatDate(dataset.publishedDate)}</div>
         </div>
-        <div className="surface-muted p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Rows")}</div>
-          <div className="mt-2 font-semibold text-[var(--text-primary)]">{(dataset.numberOfRows || 0).toLocaleString()}</div>
+        <div className="rounded-lg border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Geo View")}</div>
+          <div className="mt-2 font-semibold text-[var(--text-primary)]">{t("Dataset Only")}</div>
         </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="surface-muted flex items-center gap-3 p-4">
+        <div className="rounded-lg border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 flex items-center gap-3 p-4">
           <Eye className="h-4 w-4 text-primary" />
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Views")}</div>
             <div className="font-semibold text-[var(--text-primary)]">{stats.views.toLocaleString()}</div>
           </div>
         </div>
-        <div className="surface-muted flex items-center gap-3 p-4">
+        <div className="rounded-lg border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 flex items-center gap-3 p-4">
           <Download className="h-4 w-4 text-secondary" />
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Downloads")}</div>

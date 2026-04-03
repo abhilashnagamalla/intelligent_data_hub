@@ -4,6 +4,25 @@ import api from '../../api';
 import { Send, Bot, User, Loader2, X, Plus, MessageSquare, Trash2, Menu, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const DEFAULT_CHAT_TITLE = 'New Chat';
+
+function formatChatTitle(value) {
+  const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return DEFAULT_CHAT_TITLE;
+  return normalized.length > 44 ? `${normalized.slice(0, 44).trimEnd()}...` : normalized;
+}
+
+function hydrateChats(chats) {
+  return (Array.isArray(chats) ? chats : []).map((chat) => {
+    const firstPrompt = chat?.messages?.find((message) => message?.role === 'user' && String(message?.content || '').trim());
+    const derivedTitle = firstPrompt ? formatChatTitle(firstPrompt.content) : formatChatTitle(chat?.title);
+    return {
+      ...chat,
+      title: derivedTitle,
+    };
+  });
+}
+
 export default function Chatbot({ onClose, sector: propSector }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -13,7 +32,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
   const currentSector = propSector || urlSector || (location.pathname.match(/\/domain\/([^/]+)/)?.[1] ?? 'all');
   const sectorTitle = currentSector === 'all' ? 'General' : currentSector.charAt(0).toUpperCase() + currentSector.slice(1);
 
-  const [chats, setChats] = useState(() => JSON.parse(localStorage.getItem('chatbot_sessions') || '[]'));
+  const [chats, setChats] = useState(() => hydrateChats(JSON.parse(localStorage.getItem('chatbot_sessions') || '[]')));
   const [activeChatId, setActiveChatId] = useState(() => localStorage.getItem('chatbot_active_id') || '');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +54,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
   const messages = activeChat?.messages || [];
 
   const createNewChat = () => {
-    const newChat = { id: Date.now().toString(), title: 'New Chat', sector: currentSector, messages: [] };
+    const newChat = { id: Date.now().toString(), title: DEFAULT_CHAT_TITLE, sector: currentSector, messages: [] };
     setChats((current) => [newChat, ...current]);
     setActiveChatId(newChat.id);
   };
@@ -50,25 +69,38 @@ export default function Chatbot({ onClose, sector: propSector }) {
     setChats((current) => current.map((chat) => (chat.id === chatId ? { ...chat, messages: [...chat.messages, message] } : chat)));
   };
 
+  const setChatTitle = (chatId, title) => {
+    setChats((current) =>
+      current.map((chat) => (
+        chat.id === chatId
+          ? { ...chat, title: formatChatTitle(title) }
+          : chat
+      )),
+    );
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
+    const trimmedInput = input.trim();
 
     let chatId = activeChatId;
     if (!chatId) {
-      const newChat = { id: Date.now().toString(), title: input.slice(0, 30), sector: currentSector, messages: [] };
+      const newChat = { id: Date.now().toString(), title: formatChatTitle(trimmedInput), sector: currentSector, messages: [] };
       setChats((current) => [newChat, ...current]);
       setActiveChatId(newChat.id);
       chatId = newChat.id;
+    } else if (!activeChat?.messages?.length || activeChat?.title === DEFAULT_CHAT_TITLE) {
+      setChatTitle(chatId, trimmedInput);
     }
 
-    const userMessage = { role: 'user', content: input, timestamp: new Date().toLocaleTimeString() };
+    const userMessage = { role: 'user', content: trimmedInput, timestamp: new Date().toLocaleTimeString() };
     appendMessage(chatId, userMessage);
     setInput('');
     setIsLoading(true);
 
     try {
       const response = await api.post('/chatbot/query', {
-        query: input,
+        query: trimmedInput,
         session_id: chatId,
         sector: currentSector !== 'all' ? currentSector : null,
       });
