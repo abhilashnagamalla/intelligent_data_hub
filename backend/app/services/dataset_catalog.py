@@ -5,8 +5,10 @@ import io
 import json
 import math
 import os
+import re
 import threading
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Iterator
@@ -19,11 +21,46 @@ LISTS_API_URL = f"{API_BASE_URL}/lists"
 CATALOG_PAGE_SIZE = 9
 DETAIL_PAGE_SIZE = 500
 MAX_VISUALIZATION_ROWS = 10000
+MAX_DYNAMIC_VISUALIZATION_ROWS = 500
 SUMMARY_REFRESH_INTERVAL_SECONDS = 60 * 60 * 6
 RESOURCE_METADATA_TTL_SECONDS = 60 * 60 * 24 * 7
+VISUALIZATION_CACHE_TTL_SECONDS = 60 * 60  # Cache visualization for 1 hour
 SUMMARY_LIST_PAGE_SIZE = 100
+STATE_FILTER_BATCH_SIZE = 250  # Batch size for fetching datasets when state filtering
 SUMMARY_METADATA_WORKERS = 8
 SUMMARY_AUTO_REFRESH = os.getenv("SUMMARY_AUTO_REFRESH", "false").strip().lower() == "true"
+MAX_CATEGORY_BUCKETS = 10
+LONG_LABEL_THRESHOLD = 24
+COLUMN_DETECTION_SAMPLE_SIZE = 500
+
+SEARCH_STOP_WORDS = {
+    "a",
+    "all",
+    "and",
+    "by",
+    "data",
+    "dataset",
+    "datasets",
+    "details",
+    "for",
+    "from",
+    "in",
+    "list",
+    "of",
+    "records",
+    "show",
+    "the",
+    "to",
+    "with",
+}
+
+DOMAIN_KEYWORDS = {
+    "health": {"health", "healthcare", "hospital", "hospitals", "clinic", "clinics", "medical", "phc", "chc"},
+    "agriculture": {"agriculture", "agri", "crop", "crops", "fertilizer", "fertilizers", "farmer", "farmers"},
+    "finance": {"finance", "financial", "bank", "banks", "rbi", "loan", "loans"},
+}
+
+IDENTIFIER_HINTS = {"code", "id", "identifier", "no", "number", "serial", "uid", "uuid"}
 
 SECTOR_LABELS = {
     "agriculture": "Agriculture",
@@ -41,6 +78,42 @@ SECTOR_ALIASES = {
     "finance": {"finance", "financial"},
     "health": {"health", "healthcare", "family welfare", "health and family welfare"},
     "transport": {"transport", "transportation"},
+}
+
+RAW_STATE_FILTER_ALIASES = {
+    "AP": {"andhra", "andhra pradesh"},
+    "AR": {"arunachal pradesh"},
+    "AS": {"assam"},
+    "BR": {"bihar"},
+    "CG": {"chhattisgarh"},
+    "GA": {"goa"},
+    "GJ": {"gujarat"},
+    "HR": {"haryana"},
+    "HP": {"himachal pradesh"},
+    "JK": {"jammu and kashmir", "jammu kashmir"},
+    "JH": {"jharkhand"},
+    "KA": {"karnataka"},
+    "KL": {"kerala"},
+    "MP": {"madhya pradesh"},
+    "MH": {"maharashtra"},
+    "MN": {"manipur"},
+    "ML": {"meghalaya"},
+    "MZ": {"mizoram"},
+    "NL": {"nagaland"},
+    "OD": {"odisha", "orissa"},
+    "PB": {"punjab"},
+    "RJ": {"rajasthan"},
+    "SK": {"sikkim"},
+    "TN": {"tamil nadu", "tamil"},
+    "TG": {"telangana"},
+    "TR": {"tripura"},
+    "UT": {"uttarakhand"},
+    "UP": {"uttar pradesh"},
+    "WB": {"west bengal"},
+    "AN": {"andaman and nicobar islands", "andaman nicobar islands", "andaman nicobar"},
+    "CH": {"chandigarh"},
+    "DL": {"delhi", "nct of delhi"},
+    "PY": {"puducherry", "pondicherry"},
 }
 
 SUMMARY_COLUMNS = [
@@ -76,6 +149,7 @@ _summary_metadata_index_cache: dict[str, dict[str, Any]] | None = None
 _dataset_page_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
 _sector_page_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
 _sector_total_cache: dict[str, int] = {}
+_visualization_cache: dict[str, tuple[dict[str, Any], float]] = {}  # (visualization, timestamp)
 _summary_thread: threading.Thread | None = None
 
 
@@ -112,6 +186,514 @@ def normalize_date(value: Any) -> str | None:
         return None
     text = str(value)
     return text[:10] if len(text) >= 10 else text
+
+
+def safe_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        parsed = float(value)
+        return parsed if math.isfinite(parsed) else None
+
+    text = str(value).strip()
+    if not text or text.lower() in {"-", "--", "na", "n/a", "nan", "none", "null"}:
+        return None
+
+    normalized = text.replace(",", "")
+    if normalized.endswith("%"):
+        normalized = normalized[:-1]
+
+    try:
+        parsed = float(normalized)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def normalize_search_text(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+
+STATE_FILTER_ALIASES = {
+    code: {normalize_search_text(alias) for alias in aliases if normalize_search_text(alias)}
+    for code, aliases in RAW_STATE_FILTER_ALIASES.items()
+}
+
+STATE_FILTER_ALIAS_LOOKUP = sorted(
+    ((alias, code) for code, aliases in STATE_FILTER_ALIASES.items() for alias in aliases),
+    key=lambda item: len(item[0]),
+    reverse=True,
+)
+
+
+def contains_normalized_phrase(text: str, phrase: str) -> bool:
+    if not text or not phrase:
+        return False
+    return f" {phrase} " in f" {text} "
+
+
+def normalize_state_code(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+
+    raw_upper = raw.upper()
+    if raw_upper == "ALL":
+        return "ALL"
+
+    normalized = normalize_search_text(raw)
+    if normalized in {"all states", "all india", "india"}:
+        return "ALL"
+
+    if raw_upper in STATE_FILTER_ALIASES:
+        return raw_upper
+
+    for alias, code in STATE_FILTER_ALIAS_LOOKUP:
+        if normalized == alias:
+            return code
+
+    return raw_upper
+
+
+def dataset_matches_state_filter(dataset: dict[str, Any], state_filter: str) -> bool:
+    normalized_state_filter = normalize_state_code(state_filter)
+    if not normalized_state_filter or normalized_state_filter == "ALL":
+        return True
+
+    if normalize_state_code(dataset.get("state")) == normalized_state_filter:
+        return True
+
+    searchable_text = normalize_search_text(
+        " ".join(
+            str(part or "")
+            for part in (
+                dataset.get("title"),
+                dataset.get("organization"),
+                dataset.get("description"),
+                dataset.get("state"),
+                " ".join(str(tag) for tag in (dataset.get("tags") or [])),
+            )
+        )
+    )
+
+    return any(
+        contains_normalized_phrase(searchable_text, alias)
+        for alias in STATE_FILTER_ALIASES.get(normalized_state_filter, set())
+    )
+
+
+def token_variants(token: str) -> set[str]:
+    normalized = normalize_search_text(token)
+    if not normalized:
+        return set()
+
+    variants = {normalized}
+    if normalized.endswith("ies") and len(normalized) > 4:
+        variants.add(normalized[:-3] + "y")
+    if normalized.endswith("es") and len(normalized) > 4:
+        variants.add(normalized[:-2])
+    if normalized.endswith("s") and len(normalized) > 3:
+        variants.add(normalized[:-1])
+    return {variant for variant in variants if variant}
+
+
+def unique_query_terms(value: str) -> list[str]:
+    terms: list[str] = []
+    seen: set[str] = set()
+
+    for token in normalize_search_text(value).split():
+        for variant in token_variants(token):
+            if variant in SEARCH_STOP_WORDS or variant in seen:
+                continue
+            seen.add(variant)
+            terms.append(variant)
+
+    return terms
+
+
+def keyword_occurrence_count(text: str, keywords: list[str] | set[str]) -> int:
+    if not text or not keywords:
+        return 0
+
+    total = 0
+    for keyword in set(keywords):
+        total += len(re.findall(rf"\b{re.escape(keyword)}\b", text))
+    return total
+
+
+def flatten_tag_values(value: Any) -> list[str]:
+    if value in (None, ""):
+        return []
+
+    if isinstance(value, dict):
+        flattened: list[str] = []
+        for item in value.values():
+            flattened.extend(flatten_tag_values(item))
+        return flattened
+
+    if isinstance(value, list):
+        flattened: list[str] = []
+        for item in value:
+            flattened.extend(flatten_tag_values(item))
+        return flattened
+
+    text = str(value).strip()
+    if not text:
+        return []
+
+    if text[0] in "[{" and text[-1] in "]}":
+        try:
+            parsed = json.loads(text.replace("'", '"'))
+        except json.JSONDecodeError:
+            parsed = None
+        if parsed is not None and parsed != value:
+            return flatten_tag_values(parsed)
+
+    parts = re.split(r"[|,;/]+", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def normalize_tag_list(*values: Any) -> list[str]:
+    tags: list[str] = []
+    seen: set[str] = set()
+
+    for value in values:
+        for tag in flatten_tag_values(value):
+            normalized = normalize_search_text(tag)
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            tags.append(str(tag).strip())
+
+    return tags
+
+
+def detect_query_domains(query_terms: list[str]) -> set[str]:
+    domains: set[str] = set()
+    for sector_key, keywords in DOMAIN_KEYWORDS.items():
+        if any(term in keywords for term in query_terms):
+            domains.add(sector_key)
+    return domains
+
+
+def dataset_search_text(dataset: dict[str, Any]) -> tuple[str, str, str]:
+    title_text = normalize_search_text(dataset.get("title"))
+    description_text = normalize_search_text(dataset.get("description"))
+    tags = normalize_tag_list(dataset.get("tags"), dataset.get("category"), dataset.get("sector"))
+    tags_text = normalize_search_text(" ".join(tags))
+    return title_text, description_text, tags_text
+
+
+def search_relevance_score(
+    dataset: dict[str, Any],
+    query_text: str,
+    query_terms: list[str],
+    domain_filters: set[str],
+) -> int | None:
+    title_text, description_text, tags_text = dataset_search_text(dataset)
+
+    exact_title = int(bool(query_text and query_text in title_text))
+    exact_description = int(bool(query_text and query_text in description_text))
+    exact_tags = int(bool(query_text and query_text in tags_text))
+
+    query_hits_title = keyword_occurrence_count(title_text, query_terms)
+    query_hits_description = keyword_occurrence_count(description_text, query_terms)
+    query_hits_tags = keyword_occurrence_count(tags_text, query_terms)
+
+    domain_terms = sorted({keyword for domain in domain_filters for keyword in DOMAIN_KEYWORDS.get(domain, set())})
+    domain_hits_title = keyword_occurrence_count(title_text, domain_terms)
+    domain_hits_description = keyword_occurrence_count(description_text, domain_terms)
+    domain_hits_tags = keyword_occurrence_count(tags_text, domain_terms)
+
+    query_total = query_hits_title + query_hits_description + query_hits_tags
+    domain_total = domain_hits_title + domain_hits_description + domain_hits_tags
+    exact_total = exact_title + exact_description + exact_tags
+
+    if domain_filters and dataset.get("sectorKey") not in domain_filters:
+        return None
+
+    if exact_total == 0 and query_total == 0 and domain_total == 0:
+        return None
+
+    return (
+        exact_title * 1000
+        + exact_description * 700
+        + exact_tags * 500
+        + query_hits_title * 150
+        + query_hits_description * 110
+        + query_hits_tags * 90
+        + domain_hits_title * 35
+        + domain_hits_description * 25
+        + domain_hits_tags * 20
+    )
+
+
+def normalized_column_name(column: str) -> str:
+    return normalize_search_text(column)
+
+
+def is_identifier_column(column: str) -> bool:
+    normalized = normalized_column_name(column)
+    tokens = set(normalized.split())
+    return bool(tokens & IDENTIFIER_HINTS) or normalized.endswith(" id") or normalized == "id"
+
+
+def format_metric_value(value: float | int | None) -> str:
+    if value is None:
+        return "0"
+    numeric = float(value)
+    if numeric.is_integer():
+        return f"{int(numeric):,}"
+    return f"{numeric:,.2f}".rstrip("0").rstrip(".")
+
+
+def percentile(values: list[float], ratio: float) -> float | None:
+    if not values:
+        return None
+    if len(values) == 1:
+        return values[0]
+
+    sorted_values = sorted(values)
+    position = (len(sorted_values) - 1) * ratio
+    lower_index = math.floor(position)
+    upper_index = math.ceil(position)
+
+    if lower_index == upper_index:
+        return sorted_values[lower_index]
+
+    lower_value = sorted_values[lower_index]
+    upper_value = sorted_values[upper_index]
+    weight = position - lower_index
+    return lower_value + (upper_value - lower_value) * weight
+
+
+def label_mapping_payload(labels: list[str]) -> tuple[list[str], list[dict[str, str]]]:
+    if not labels:
+        return [], []
+
+    use_short_labels = any(len(label) > LONG_LABEL_THRESHOLD for label in labels)
+    if not use_short_labels:
+        return labels, []
+
+    display_labels: list[str] = []
+    mapping: list[dict[str, str]] = []
+    for index, label in enumerate(labels, start=1):
+        short_label = str(index)
+        display_labels.append(short_label)
+        mapping.append({"shortLabel": short_label, "fullLabel": label})
+    return display_labels, mapping
+
+
+def detect_numeric_columns(records: list[dict[str, Any]], columns: list[str]) -> list[str]:
+    # For visualization we only need 1-2 columns, so optimize for early exit
+    sample = records[:COLUMN_DETECTION_SAMPLE_SIZE]
+    candidates: list[tuple[int, int, str]] = []
+    
+    # First pass: quick check with smaller sample for speed
+    quick_sample = sample[:min(100, len(sample))]
+    
+    for column in columns:
+        non_empty = 0
+        valid_numeric = 0
+        for record in quick_sample:
+            value = record.get(column)
+            if value in (None, ""):
+                continue
+            non_empty += 1
+            if safe_float(value) is not None:
+                valid_numeric += 1
+
+        # Skip obviously non-numeric columns immediately
+        if non_empty == 0 or valid_numeric < 1:
+            continue
+        
+        # For quick pass, require 50% validity (loose threshold)
+        if valid_numeric / non_empty < 0.5:
+            continue
+
+        # Full validation only on promising candidates
+        full_non_empty = 0
+        full_valid_numeric = 0
+        for record in sample:
+            value = record.get(column)
+            if value in (None, ""):
+                continue
+            full_non_empty += 1
+            if safe_float(value) is not None:
+                full_valid_numeric += 1
+        
+        if full_non_empty == 0 or full_valid_numeric < 2:
+            continue
+        
+        if full_valid_numeric / full_non_empty < 0.7:
+            continue
+
+        candidates.append((1 if is_identifier_column(column) else 0, -full_valid_numeric, column))
+        
+        # Early exit: if we found 2+ good numeric columns, we can stop
+        if len(candidates) >= 2:
+            break
+
+    candidates.sort(key=lambda item: (item[0], item[1], item[2].lower()))
+    return [column for _, _, column in candidates]
+
+
+def detect_categorical_columns(records: list[dict[str, Any]], columns: list[str], numeric: list[str]) -> list[str]:
+    sample = records[:COLUMN_DETECTION_SAMPLE_SIZE]
+    candidates: list[tuple[int, float, int, str]] = []
+
+    for column in columns:
+        if column in numeric:
+            continue
+
+        values = [str(record.get(column) or "").strip() for record in sample]
+        values = [value for value in values if value]
+        if len(values) < 2:
+            continue
+
+        unique_count = len(set(values))
+        if unique_count < 2:
+            continue
+
+        unique_ratio = unique_count / len(values)
+        if unique_count > max(MAX_CATEGORY_BUCKETS * 4, 20) or unique_ratio > 0.35:
+            continue
+
+        candidates.append((1 if is_identifier_column(column) else 0, unique_ratio, unique_count, column))
+        
+        # Early exit: if we found 1 good categorical column, we can stop
+        if len(candidates) >= 1:
+            break
+
+    candidates.sort(key=lambda item: (item[0], item[1], item[2], item[3].lower()))
+    return [column for _, _, _, column in candidates]
+
+
+def aggregate_category_values(
+    records: list[dict[str, Any]],
+    category_column: str,
+    numeric_column: str,
+) -> list[dict[str, Any]]:
+    aggregated: dict[str, float] = defaultdict(float)
+
+    for record in records:
+        category = str(record.get(category_column) or "").strip() or "Unknown"
+        value = safe_float(record.get(numeric_column))
+        if value is None:
+            continue
+        aggregated[category] += value
+
+    return [
+        {"label": label, "value": value}
+        for label, value in sorted(aggregated.items(), key=lambda item: (-item[1], item[0].lower()))
+    ]
+
+
+def build_bar_chart(records: list[dict[str, Any]], category_column: str, numeric_column: str) -> dict[str, Any] | None:
+    ranked_values = aggregate_category_values(records, category_column, numeric_column)
+    if not ranked_values:
+        return None
+
+    grouped_categories: list[dict[str, Any]] = []
+    if len(ranked_values) > MAX_CATEGORY_BUCKETS:
+        grouped_categories = ranked_values[MAX_CATEGORY_BUCKETS - 1 :]
+        others_value = sum(item["value"] for item in grouped_categories)
+        ranked_values = ranked_values[: MAX_CATEGORY_BUCKETS - 1]
+        ranked_values.append({"label": "Others", "value": others_value})
+
+    labels = [str(item["label"]) for item in ranked_values]
+    display_labels, label_mapping = label_mapping_payload(labels)
+
+    chart_data: list[dict[str, Any]] = []
+    for index, item in enumerate(ranked_values):
+        chart_data.append(
+            {
+                "displayLabel": display_labels[index],
+                "fullLabel": str(item["label"]),
+                "value": item["value"],
+                "grouped": str(item["label"]) == "Others",
+            }
+        )
+
+    return {
+        "type": "bar",
+        "title": f"{numeric_column} by {category_column}",
+        "xKey": "displayLabel",
+        "yKey": "value",
+        "xLabel": category_column,
+        "yLabel": numeric_column,
+        "data": chart_data,
+        "labelMapping": label_mapping,
+        "groupedCategories": [
+            {"label": item["label"], "value": format_metric_value(item["value"])}
+            for item in grouped_categories
+        ],
+        "groupedTotal": format_metric_value(sum(item["value"] for item in grouped_categories)) if grouped_categories else None,
+    }
+
+
+def build_histogram_chart(values: list[float], numeric_column: str) -> dict[str, Any] | None:
+    if not values:
+        return None
+
+    minimum = min(values)
+    maximum = max(values)
+    if math.isclose(minimum, maximum):
+        return {
+            "type": "histogram",
+            "title": f"Distribution of {numeric_column}",
+            "xKey": "displayLabel",
+            "yKey": "count",
+            "xLabel": numeric_column,
+            "yLabel": "Count",
+            "data": [
+                {
+                    "displayLabel": format_metric_value(minimum),
+                    "fullLabel": f"{numeric_column} = {format_metric_value(minimum)}",
+                    "count": len(values),
+                }
+            ],
+            "labelMapping": [],
+            "groupedCategories": [],
+            "groupedTotal": None,
+        }
+
+    bin_count = min(10, max(5, int(math.sqrt(len(values)))))
+    width = (maximum - minimum) / bin_count
+    bins = [0 for _ in range(bin_count)]
+
+    for value in values:
+        index = min(int((value - minimum) / width), bin_count - 1)
+        bins[index] += 1
+
+    full_labels: list[str] = []
+    for index in range(bin_count):
+        lower = minimum + (width * index)
+        upper = maximum if index == bin_count - 1 else minimum + (width * (index + 1))
+        full_labels.append(f"{format_metric_value(lower)} to {format_metric_value(upper)}")
+
+    display_labels, label_mapping = label_mapping_payload(full_labels)
+    chart_data = [
+        {
+            "displayLabel": display_labels[index],
+            "fullLabel": full_labels[index],
+            "count": bins[index],
+        }
+        for index in range(bin_count)
+    ]
+
+    return {
+        "type": "histogram",
+        "title": f"Distribution of {numeric_column}",
+        "xKey": "displayLabel",
+        "yKey": "count",
+        "xLabel": numeric_column,
+        "yLabel": "Count",
+        "data": chart_data,
+        "labelMapping": label_mapping,
+        "groupedCategories": [],
+        "groupedTotal": None,
+    }
 
 
 def api_url(resource_id: str, *, limit: int = 500, offset: int = 0) -> str:
@@ -211,6 +793,13 @@ def load_catalogs() -> dict[str, list[dict[str, Any]]]:
                         "resourceId": resource_id,
                         "title": str(item.get("title") or "Untitled Dataset").strip(),
                         "description": str(item.get("description") or item.get("desc") or "").strip(),
+                        "tags": normalize_tag_list(
+                            item.get("tags"),
+                            item.get("keywords"),
+                            item.get("keyword"),
+                            item.get("category"),
+                            item.get("sector"),
+                        ),
                         "organization": str(item.get("organization") or item.get("department") or "Government of India").strip(),
                         "publishedDate": normalize_date(item.get("publishedDate") or item.get("date_created")),
                         "updatedDate": normalize_date(item.get("updatedDate") or item.get("date_updated")),
@@ -478,21 +1067,51 @@ def build_dataset_from_api_record(record: dict[str, Any], fallback_sector: str |
     else:
         organization = str(organizations or record.get("org_type") or "Government of India")
 
+    title = str(record.get("title") or "Untitled Dataset").strip()
+    description = str(record.get("desc") or record.get("description") or "").strip()
+
+    # Extract state from metadata text so state filters can match title-based catalogs too.
+    tags = normalize_tag_list(
+        record.get("tags"),
+        record.get("keywords"),
+        record.get("keyword"),
+        record.get("group_tags"),
+        record.get("theme"),
+        sector_values,
+    )
+    state = extract_state_from_tags(tags, organization, title, description)
+
     return {
         "id": str(record.get("index_name") or record.get("resource_id") or "").replace(".csv", ""),
         "resourceId": str(record.get("index_name") or record.get("resource_id") or "").replace(".csv", ""),
-        "title": str(record.get("title") or "Untitled Dataset").strip(),
-        "description": str(record.get("desc") or record.get("description") or "").strip(),
+        "title": title,
+        "description": description,
+        "tags": tags,
         "organization": organization.strip() or "Government of India",
         "publishedDate": normalize_date(record.get("created_date")),
         "updatedDate": normalize_date(record.get("updated_date")),
-        "state": "All States",
+        "state": state,
         "sector": sector_label(sector_key),
         "sectorKey": sector_key,
         "category": sector_label(sector_key),
         "datasetCount": 0,
         "apiCount": 1,
     }
+
+
+def extract_state_from_tags(tags: list[str], organization: str, *extra_texts: Any) -> str:
+    """Extract state code from tags and organization field.
+    
+    Returns state code (e.g., "UP", "KA", "DL") or "ALL" if not found.
+    Must match the state codes from frontend constants/states.js
+    """
+    combined_text = normalize_search_text(" ".join([*tags, organization, *(str(item or "") for item in extra_texts)]))
+
+    for alias, state_code in STATE_FILTER_ALIAS_LOOKUP:
+        if contains_normalized_phrase(combined_text, alias):
+            return state_code
+
+    return "ALL"
 
 
 def get_dataset_by_id(resource_id: str) -> tuple[str | None, dict[str, Any] | None]:
@@ -505,7 +1124,11 @@ def get_dataset_by_id(resource_id: str) -> tuple[str | None, dict[str, Any] | No
 
     try:
         payload = request_json(api_url(normalized_id, limit=1, offset=0))
-    except requests.RequestException:
+    except requests.RequestException as exc:
+        # Preserve downstream status handling for API rate limits.
+        if "429" in str(exc):
+            raise
+        # Dataset not found or API failure should be treated as missing dataset.
         return None, None
 
     dataset = build_dataset_from_api_record(payload)
@@ -650,8 +1273,74 @@ def get_sector_total(sector_key: str) -> int:
     return safe_int(response.get("totalDatasets"))
 
 
-def get_sector_datasets(sector_key: str, *, page: int = 1, limit: int = CATALOG_PAGE_SIZE) -> dict[str, Any]:
-    return fetch_sector_api_page(sector_key, page=page, limit=limit)
+def fetch_all_sector_datasets(sector_key: str, *, max_batches: int = 4) -> list[dict[str, Any]]:
+    """
+    Fetch multiple batches of datasets for a sector to use with state filtering.
+    
+    Args:
+        sector_key: Sector to fetch datasets for
+        max_batches: Maximum batches to fetch (each batch = STATE_FILTER_BATCH_SIZE)
+    
+    Returns:
+        List of all datasets fetched (up to max_batches * STATE_FILTER_BATCH_SIZE)
+    """
+    all_datasets = []
+    normalized_sector = normalize_sector_key(sector_key)
+    
+    for batch_num in range(1, max_batches + 1):
+        try:
+            response = fetch_sector_api_page(normalized_sector, page=batch_num, limit=STATE_FILTER_BATCH_SIZE)
+            datasets = response.get("datasets", [])
+            
+            if not datasets:
+                # No more datasets to fetch
+                break
+            
+            all_datasets.extend(datasets)
+            
+            # Stop if we've reached the end
+            total_pages = response.get("totalPages", 0)
+            if batch_num >= total_pages:
+                break
+                
+        except Exception:
+            # If batch fetch fails, return what we have
+            break
+    
+    return all_datasets
+
+
+def get_sector_datasets(sector_key: str, *, page: int = 1, limit: int = CATALOG_PAGE_SIZE, state_filter: str | None = None) -> dict[str, Any]:
+    """Fetch datasets for a sector, optionally filtered by state code (e.g., "UP", "KA", "DL")."""
+    normalized_state_filter = normalize_state_code(state_filter)
+
+    # When no state filter, use direct API pagination
+    if not normalized_state_filter or normalized_state_filter == "ALL":
+        return fetch_sector_api_page(sector_key, page=page, limit=limit)
+
+    # When state filter is applied, fetch multiple batches and filter
+    all_datasets = fetch_all_sector_datasets(sector_key)
+
+    # Match state-aware metadata as well as titles like "Telangana ..." within the chosen sector.
+    filtered_datasets = [dataset for dataset in all_datasets if dataset_matches_state_filter(dataset, normalized_state_filter)]
+
+    # Calculate pagination for filtered results
+    total = len(filtered_datasets)
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_datasets = filtered_datasets[start_idx:end_idx]
+
+    return {
+        "sector": sector_label(normalize_sector_key(sector_key)),
+        "sectorKey": normalize_sector_key(sector_key),
+        "datasets": paginated_datasets,
+        "page": page,
+        "limit": limit,
+        "totalDatasets": total,
+        "totalPages": max(1, math.ceil(total / limit)) if total else 0,
+        "source": "api",
+        "stateFilter": normalized_state_filter,
+    }
 
 
 def get_all_datasets(limit: int = CATALOG_PAGE_SIZE) -> dict[str, dict[str, Any]]:
@@ -659,36 +1348,34 @@ def get_all_datasets(limit: int = CATALOG_PAGE_SIZE) -> dict[str, dict[str, Any]
 
 
 def search_datasets(query: str, sector_key: str | None = None) -> list[dict[str, Any]]:
-    term = (query or "").strip().lower()
-    if not term:
+    query_text = normalize_search_text(query)
+    query_terms = unique_query_terms(query)
+    if not query_text or not query_terms:
         return []
 
-    sectors_to_search = [normalize_sector_key(sector_key)] if sector_key else sector_keys()
-    results: list[dict[str, Any]] = []
+    normalized_sector = normalize_sector_key(sector_key) if sector_key else None
+    domain_filters = detect_query_domains(query_terms)
+    sectors_to_search = [normalized_sector] if normalized_sector else sorted(domain_filters) or sector_keys()
+    scored_results: dict[str, tuple[int, dict[str, Any]]] = {}
 
     for key in sectors_to_search:
         local_datasets = [enrich_dataset(dataset) for dataset in load_catalogs().get(key, [])]
         api_preview = fetch_sector_api_page(key, page=1, limit=50).get("datasets", [])
         for dataset in [*api_preview, *local_datasets]:
-            haystack = " ".join(
-                [
-                    str(dataset.get("title") or ""),
-                    str(dataset.get("description") or ""),
-                    str(dataset.get("organization") or ""),
-                    str(dataset.get("state") or ""),
-                    str(dataset.get("id") or ""),
-                ]
-            ).lower()
-            if term in haystack:
-                results.append(dataset)
+            score = search_relevance_score(dataset, query_text, query_terms, domain_filters)
+            if score is None:
+                continue
 
-    results.sort(
-        key=lambda item: (
-            term not in str(item.get("title") or "").lower(),
-            str(item.get("title") or "").lower(),
-        )
+            dataset_id = str(dataset.get("id") or "")
+            existing = scored_results.get(dataset_id)
+            if existing is None or score > existing[0]:
+                scored_results[dataset_id] = (score, dataset)
+
+    ranked = sorted(
+        scored_results.values(),
+        key=lambda item: (-item[0], str(item[1].get("title") or "").lower()),
     )
-    return results
+    return [dataset for _, dataset in ranked]
 
 
 def fetch_dataset_page(resource_id: str, *, limit: int = DETAIL_PAGE_SIZE, offset: int = 0) -> dict[str, Any]:
@@ -1060,125 +1747,336 @@ def sector_link_payload(sector_key: str, title: str | None = None) -> dict[str, 
     }
 
 
-def numeric_columns(records: list[dict[str, Any]]) -> list[str]:
+def get_visualization_cache(resource_id: str) -> dict[str, Any] | None:
+    """Retrieve cached visualization if it exists and hasn't expired."""
+    if resource_id not in _visualization_cache:
+        return None
+    cached_viz, timestamp = _visualization_cache[resource_id]
+    if time.time() - timestamp > VISUALIZATION_CACHE_TTL_SECONDS:
+        del _visualization_cache[resource_id]
+        return None
+    return cached_viz
+
+
+def set_visualization_cache(resource_id: str, visualization: dict[str, Any]) -> None:
+    """Store visualization in cache with current timestamp."""
+    _visualization_cache[resource_id] = (visualization, time.time())
+
+
+def numeric_columns(records: list[dict[str, Any]], columns: list[str] | None = None) -> list[str]:
     if not records:
         return []
-    columns = list(records[0].keys())
-    numeric: list[str] = []
-    for column in columns:
-        valid = 0
-        for record in records[: min(len(records), 200)]:
-            try:
-                float(record.get(column))
-                valid += 1
-            except (TypeError, ValueError):
-                continue
-        if valid:
-            numeric.append(column)
-    return numeric
+    resolved_columns = columns or list(records[0].keys())
+    return detect_numeric_columns(records, resolved_columns)
 
 
-def infer_visualization(records: list[dict[str, Any]], columns: list[str]) -> dict[str, Any]:
-    if not records:
+def infer_visualization(records: list[dict[str, Any]], columns: list[str], *, total_rows: int | None = None) -> dict[str, Any]:
+    resolved_columns = columns or (list(records[0].keys()) if records else [])
+    total = total_rows or len(records)
+
+    if total > MAX_DYNAMIC_VISUALIZATION_ROWS:
+        return {
+            "message": "Data is too large to create visualization",
+            "charts": [],
+            "rowCount": total,
+            "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+        }
+
+    if not records or not resolved_columns:
         return {"message": "No visualization available for this dataset.", "charts": []}
 
-    numeric = numeric_columns(records)
-    non_numeric = [column for column in columns if column not in numeric]
+    numeric = detect_numeric_columns(records, resolved_columns)
     if not numeric:
         return {"message": "No numeric columns available for visualization.", "charts": []}
 
-    primary_metric = numeric[0]
-    label_column = next((column for column in non_numeric if "date" in column.lower() or "year" in column.lower() or "month" in column.lower()), None)
-    if label_column:
-        chart_type = "line"
-        data = [
-            {"label": str(record.get(label_column, "")), primary_metric: safe_int(record.get(primary_metric))}
-            for record in records[:50]
-        ]
-        return {
-            "message": None,
-            "charts": [
-                {
-                    "type": chart_type,
-                    "title": f"{primary_metric} by {label_column}",
-                    "xKey": "label",
-                    "yKey": primary_metric,
-                    "data": data,
-                }
-            ],
-        }
-
-    category_column = next((column for column in non_numeric if len({str(record.get(column, "")) for record in records[:100]}) <= 20), None)
-    if category_column:
-        bucket: dict[str, float] = {}
-        for record in records:
-            key = str(record.get(category_column, "")).strip() or "Unknown"
-            try:
-                bucket[key] = bucket.get(key, 0.0) + float(record.get(primary_metric) or 0)
-            except (TypeError, ValueError):
-                continue
-        data = [{"label": key, primary_metric: value} for key, value in sorted(bucket.items(), key=lambda item: item[1], reverse=True)[:20]]
-        return {
-            "message": None,
-            "charts": [
-                {
-                    "type": "bar",
-                    "title": f"{primary_metric} by {category_column}",
-                    "xKey": "label",
-                    "yKey": primary_metric,
-                    "data": data,
-                }
-            ],
-        }
-
-    values = []
-    for record in records:
-        try:
-            values.append(float(record.get(primary_metric) or 0))
-        except (TypeError, ValueError):
-            continue
-
-    histogram_data = [{"label": str(index + 1), primary_metric: value} for index, value in enumerate(values[:100])]
-    return {
-        "message": None,
-        "charts": [
-            {
-                "type": "histogram",
-                "title": primary_metric,
-                "xKey": "label",
-                "yKey": primary_metric,
-                "data": histogram_data,
-            }
-        ],
-    }
-
-
-def dataset_insights(records: list[dict[str, Any]], columns: list[str]) -> list[str]:
-    insights: list[str] = []
-    total_rows = len(records)
-    insights.append(f"Rows analyzed: {total_rows}.")
-    insights.append(f"Columns analyzed: {len(columns)}.")
-
-    numeric = numeric_columns(records)
-    if numeric:
-        primary_metric = numeric[0]
-        values = []
-        for record in records:
-            try:
-                values.append(float(record.get(primary_metric) or 0))
-            except (TypeError, ValueError):
-                continue
-        if values:
-            insights.append(f"{primary_metric}: min {min(values):.2f}, max {max(values):.2f}, average {sum(values) / len(values):.2f}.")
-
-    categorical = [column for column in columns if column not in numeric]
+    primary_numeric = numeric[0]
+    categorical = detect_categorical_columns(records, resolved_columns, numeric)
     if categorical:
-        primary_label = categorical[0]
-        counts: dict[str, int] = {}
-        for record in records:
-            key = str(record.get(primary_label, "")).strip() or "Unknown"
-            counts[key] = counts.get(key, 0) + 1
-        top_label = max(counts.items(), key=lambda item: item[1])
-        insights.append(f"Most frequent {primary_label}: {top_label[0]} ({top_label[1]} rows).")
+        bar_chart = build_bar_chart(records, categorical[0], primary_numeric)
+        if bar_chart:
+            return {"message": None, "charts": [bar_chart], "rowCount": total}
+
+    numeric_values = [safe_float(record.get(primary_numeric)) for record in records]
+    numeric_values = [value for value in numeric_values if value is not None]
+    histogram_chart = build_histogram_chart(numeric_values, primary_numeric)
+    if histogram_chart:
+        return {"message": None, "charts": [histogram_chart], "rowCount": total}
+
+    return {"message": "No visualization available for this dataset.", "charts": []}
+
+
+def dataset_insights(
+    records: list[dict[str, Any]],
+    columns: list[str],
+    *,
+    total_rows: int | None = None,
+    sampled: bool = False,
+) -> list[str]:
+    resolved_columns = columns or (list(records[0].keys()) if records else [])
+    if not records or not resolved_columns:
+        return []
+
+    insights: list[str] = []
+    analyzed_rows = len(records)
+    actual_total_rows = total_rows or analyzed_rows
+    insights.append(
+        f"Dataset has {analyzed_rows:,} rows and {len(resolved_columns):,} columns."
+    )
+
+    if sampled and actual_total_rows > analyzed_rows:
+        insights.append(
+            f"Insights are based on the first {analyzed_rows:,} rows sampled from {actual_total_rows:,} total rows."
+        )
+
+    numeric = detect_numeric_columns(records, resolved_columns)
+    categorical = detect_categorical_columns(records, resolved_columns, numeric)
+
+    if categorical:
+        insights.append(
+            f"Key categorical column detected: {categorical[0]}."
+        )
+    if numeric:
+        insights.append(
+            f"Numeric columns include: {', '.join(numeric)}."
+        )
+
+    def parse_year(col_name: str) -> str | None:
+        match = re.search(r"(\d{4}(?:-\d{2})?)", col_name)
+        if match:
+            return match.group(1)
+        return None
+
+    def normalize_metric_name(col_name: str) -> str:
+        base = re.sub(r"(\d{4}(?:-\d{2})?|grand total)", "", col_name, flags=re.IGNORECASE)
+        base = re.sub(r"[^a-z0-9]+", " ", base.lower()).strip()
+        return base
+
+    major_groups: dict[str, dict[str, str]] = {}
+    for col in resolved_columns:
+        if col in categorical:
+            continue
+        year = parse_year(col)
+        if not year:
+            continue
+        group = normalize_metric_name(col)
+        if not group:
+            continue
+        major_groups.setdefault(group, {})[year] = col
+
+    if categorical and major_groups:
+        category_column = categorical[0]
+        for group_name, yearly_cols in major_groups.items():
+            if len(yearly_cols) < 2:
+                continue
+
+            group_insights: list[str] = []
+            annual_leaders: list[str] = []
+            overall_totals: dict[str, float] = {}
+
+            for year, col_name in sorted(yearly_cols.items()):
+                best_state = None
+                best_value = float("-inf")
+                for row in records:
+                    state_key = str(row.get(category_column, "")).strip() or "Unknown"
+                    value = safe_float(row.get(col_name))
+                    if value is None:
+                        continue
+                    overall_totals[state_key] = overall_totals.get(state_key, 0.0) + value
+                    if value > best_value:
+                        best_value = value
+                        best_state = state_key
+
+                if best_state is not None:
+                    annual_leaders.append(f"{year}={best_state} ({format_metric_value(best_value)})")
+
+            if not overall_totals or not annual_leaders:
+                continue
+
+            highest_state = max(overall_totals.items(), key=lambda pair: pair[1])
+            group_insights.append(
+                f"For '{group_name}', overall top state is {highest_state[0]} with {format_metric_value(highest_state[1])}."
+            )
+            group_insights.append(
+                f"Year-by-year leaders for '{group_name}': {', '.join(annual_leaders)}."
+            )
+
+            if len(group_insights) > 0:
+                insights.extend(group_insights)
+
+            # Add a rapid growth highlight if possible
+            if len(yearly_cols) >= 2:
+                sorted_years = sorted(yearly_cols.keys())
+                first_year = sorted_years[0]
+                last_year = sorted_years[-1]
+                first_col = yearly_cols[first_year]
+                last_col = yearly_cols[last_year]
+                growth_candidates = []
+                for state, total in overall_totals.items():
+                    first_val = safe_float(next((r.get(first_col) for r in records if str(r.get(category_column, "")).strip() == state), None))
+                    last_val = safe_float(next((r.get(last_col) for r in records if str(r.get(category_column, "")).strip() == state), None))
+                    if first_val is None or last_val is None or first_val == 0:
+                        continue
+                    growth_candidates.append((state, (last_val - first_val) / first_val * 100.0))
+                if growth_candidates:
+                    best_growth = max(growth_candidates, key=lambda item: item[1])
+                    insights.append(
+                        f"{best_growth[0]} has the highest growth for '{group_name}' from {first_year} to {last_year} ({format_metric_value(best_growth[1])}% increase)."
+                    )
+
+    if not numeric:
+        return insights
+
+    primary_numeric = numeric[0]
+    numeric_values = [safe_float(record.get(primary_numeric)) for record in records]
+    numeric_values = [value for value in numeric_values if value is not None]
+    if not numeric_values:
+        return insights
+
+    if categorical:
+        category_column = categorical[0]
+        ranked_values = aggregate_category_values(records, category_column, primary_numeric)
+        if ranked_values:
+            highest = ranked_values[0]
+            lowest = ranked_values[-1]
+            category_values = [item["value"] for item in ranked_values]
+            average_value = sum(category_values) / len(category_values)
+            total_value = sum(category_values)
+            top_three_share = (sum(item["value"] for item in ranked_values[:3]) / total_value * 100) if total_value else 0
+
+            insights.append(
+                f"{category_column} '{highest['label']}' has the highest {primary_numeric} ({format_metric_value(highest['value'])})."
+            )
+            insights.append(
+                f"{category_column} '{lowest['label']}' has the lowest {primary_numeric} ({format_metric_value(lowest['value'])})."
+            )
+            insights.append(
+                f"Average {primary_numeric} across {len(ranked_values):,} {category_column.lower()} categories is {format_metric_value(average_value)}."
+            )
+            insights.append(
+                f"The top 3 {category_column.lower()} categories contribute {format_metric_value(top_three_share)}% of the total {primary_numeric}."
+            )
+
+            q1 = percentile(category_values, 0.25)
+            q3 = percentile(category_values, 0.75)
+            if q1 is not None and q3 is not None:
+                insights.append(
+                    f"Most category totals fall between {format_metric_value(q1)} and {format_metric_value(q3)} for {primary_numeric}."
+                )
+
+            if len(category_values) >= 4 and q1 is not None and q3 is not None:
+                iqr = q3 - q1
+                upper_bound = q3 + (1.5 * iqr)
+                outliers = [item["label"] for item in ranked_values if item["value"] > upper_bound]
+                if outliers:
+                    insights.append(
+                        f"Potential high-value outliers in {primary_numeric}: {', '.join(outliers[:5])}."
+                    )
+            return insights
+
+    average_value = sum(numeric_values) / len(numeric_values)
+    median_value = percentile(numeric_values, 0.5)
+    q1 = percentile(numeric_values, 0.25)
+    q3 = percentile(numeric_values, 0.75)
+    minimum = min(numeric_values)
+    maximum = max(numeric_values)
+
+    insights.append(
+        f"{primary_numeric} ranges from {format_metric_value(minimum)} to {format_metric_value(maximum)}."
+    )
+    insights.append(
+        f"Average {primary_numeric} is {format_metric_value(average_value)} and the median is {format_metric_value(median_value)}."
+    )
+    if q1 is not None and q3 is not None:
+        insights.append(
+            f"Most values fall between {format_metric_value(q1)} and {format_metric_value(q3)}."
+        )
+        if len(numeric_values) >= 4:
+            iqr = q3 - q1
+            lower_bound = q1 - (1.5 * iqr)
+            upper_bound = q3 + (1.5 * iqr)
+            outlier_count = sum(1 for value in numeric_values if value < lower_bound or value > upper_bound)
+            if outlier_count:
+                insights.append(f"{outlier_count:,} values appear as potential outliers for {primary_numeric}.")
+
 
     return insights
+
+
+def create_custom_visualization(
+    records: list[dict[str, Any]],
+    columns: list[str],
+    category_column: str,
+    numeric_column: str,
+    *,
+    total_rows: int | None = None,
+) -> dict[str, Any]:
+    """
+    Create a custom visualization based on user-selected categorical and numeric columns.
+    
+    Args:
+        records: List of data records
+        columns: Available column names
+        category_column: Name of categorical column for X-axis
+        numeric_column: Name of numeric column for Y-axis (values to aggregate)
+        total_rows: Total row count (for large datasets)
+    
+    Returns:
+        Visualization response with bar chart or error message
+    """
+    total = total_rows or len(records)
+    
+    # Check row count
+    if total > MAX_DYNAMIC_VISUALIZATION_ROWS:
+        return {
+            "message": f"Data is too large to create visualization ({total} rows). Maximum is {MAX_DYNAMIC_VISUALIZATION_ROWS} rows.",
+            "charts": [],
+            "rowCount": total,
+            "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+        }
+    
+    # Validate column names exist
+    if category_column not in columns:
+        return {
+            "message": f"Category column '{category_column}' not found in dataset. Available columns: {', '.join(columns[:10])}{'...' if len(columns) > 10 else ''}",
+            "charts": [],
+        }
+    
+    if numeric_column not in columns:
+        return {
+            "message": f"Numeric column '{numeric_column}' not found in dataset. Available columns: {', '.join(columns[:10])}{'...' if len(columns) > 10 else ''}",
+            "charts": [],
+        }
+    
+    # Verify numeric column is actually numeric
+    numeric_values = [safe_float(record.get(numeric_column)) for record in records[:100]]
+    numeric_values = [v for v in numeric_values if v is not None]
+    if not numeric_values:
+        return {
+            "message": f"Column '{numeric_column}' does not contain numeric values. Please select a numeric column.",
+            "charts": [],
+        }
+    
+    # Verify category column has string/categorical values
+    category_values = [str(record.get(category_column, "")).strip() for record in records[:100]]
+    category_values = [v for v in category_values if v]
+    if not category_values:
+        return {
+            "message": f"Column '{category_column}' does not contain usable categorical values.",
+            "charts": [],
+        }
+    
+    # Build the bar chart
+    bar_chart = build_bar_chart(records, category_column, numeric_column)
+    if bar_chart:
+        return {
+            "message": None,
+            "charts": [bar_chart],
+            "rowCount": total,
+            "customVisualization": True,
+        }
+    
+    return {
+        "message": "Could not generate visualization with selected columns.",
+        "charts": [],
+    }
+

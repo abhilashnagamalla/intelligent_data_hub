@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
-import os
-import pandas as pd
 import requests
 
 
 from app.services.dataset_catalog import (
     DETAIL_PAGE_SIZE,
+    MAX_DYNAMIC_VISUALIZATION_ROWS,
     MAX_VISUALIZATION_ROWS,
+    create_custom_visualization,
     dataset_insights,
     enrich_dataset,
     fetch_dataset_page,
@@ -17,9 +17,11 @@ from app.services.dataset_catalog import (
     get_dataset_by_id,
     get_sector_datasets,
     get_dataset_stats,
+    get_visualization_cache,
     increment_tracker,
     infer_visualization,
     search_datasets,
+    set_visualization_cache,
     start_summary_refresh,
     stream_dataset_csv,
     summary_file_for_sector,
@@ -61,7 +63,13 @@ def dataset_live_data(
 @router.get("/by-id/{dataset_id}")
 def dataset_by_id(dataset_id: str):
     start_summary_refresh()
-    sector_key, dataset = get_dataset_by_id(dataset_id)
+    try:
+        sector_key, dataset = get_dataset_by_id(dataset_id)
+    except requests.RequestException as exc:
+        if "429" in str(exc):
+            raise HTTPException(status_code=429, detail="data.gov.in rate limit reached. Please retry shortly.") from exc
+        raise HTTPException(status_code=502, detail="Failed to fetch dataset metadata") from exc
+
     if dataset is None or sector_key is None:
         raise HTTPException(status_code=404, detail=f"Dataset with id {dataset_id} not found")
 
@@ -97,10 +105,11 @@ def sector_datasets(
     sector: str,
     page: int = Query(1, ge=1),
     limit: int = Query(9, ge=1, le=100),
+    state: str = Query(None, description="Filter datasets by state (state code or name)"),
 ):
     start_summary_refresh()
     try:
-        return get_sector_datasets(sector, page=page, limit=limit)
+        return get_sector_datasets(sector, page=page, limit=limit, state_filter=state)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -144,39 +153,63 @@ def dataset_download(sector: str, dataset_id: str):
 @router.get("/{sector}/{dataset_id}")
 def dataset_analysis(sector: str, dataset_id: str):
     start_summary_refresh()
-    dataset = get_catalog_dataset(sector, dataset_id)
-    if dataset is None:
-        detected_sector, dataset = get_dataset_by_id(dataset_id)
+    try:
+        # Check visualization cache first for faster response
+        cached_viz = get_visualization_cache(dataset_id)
+        if cached_viz is not None:
+            # Cache hit - return immediately with basic stats
+            dataset = get_catalog_dataset(sector, dataset_id)
+            if dataset is None:
+                detected_sector, dataset = get_dataset_by_id(dataset_id)
+                if dataset is None:
+                    raise HTTPException(status_code=404, detail="Dataset not found")
+                sector = detected_sector or sector
+            enriched = enrich_dataset(dataset, include_remote_metadata=True)
+            stats = get_dataset_stats(sector, dataset_id)
+            return {
+                "dataset": enriched,
+                "stats": stats,
+                "visualization": cached_viz,
+                "insights": [],  # Skip insights for cached response
+            }
+        
+        dataset = get_catalog_dataset(sector, dataset_id)
         if dataset is None:
-            raise HTTPException(status_code=404, detail="Dataset not found")
-        sector = detected_sector or sector
+            detected_sector, dataset = get_dataset_by_id(dataset_id)
+            if dataset is None:
+                raise HTTPException(status_code=404, detail="Dataset not found")
+            sector = detected_sector or sector
 
-    enriched = enrich_dataset(dataset, include_remote_metadata=True)
-    stats = get_dataset_stats(sector, dataset_id)
-    full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_VISUALIZATION_ROWS)
+        enriched = enrich_dataset(dataset, include_remote_metadata=True)
+        stats = get_dataset_stats(sector, dataset_id)
+        full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_DYNAMIC_VISUALIZATION_ROWS)
+    except requests.RequestException as exc:
+        if "429" in str(exc):
+            raise HTTPException(status_code=429, detail="data.gov.in rate limit reached. Please retry shortly.") from exc
+        raise HTTPException(status_code=502, detail="Failed to fetch dataset metadata") from exc
 
     records = full_dataset.get("records", [])
     columns = full_dataset.get("columns", [])
-    records = full_dataset.get("records", [])
-    columns = full_dataset.get("columns", [])
-    if full_dataset.get("tooLarge") or not records:
-
-        from ..services.dataset_catalog import summary_file_for_sector
-        summary_path = summary_file_for_sector(sector)
-        import os
-        import pandas as pd
-        if os.path.exists(summary_path):
-            summary_df = pd.read_csv(summary_path)
-            records = summary_df.to_dict('records')[:1000]
-            columns = summary_df.columns.tolist()
-            visualization = infer_visualization(records, columns)
-            insights = dataset_insights(records, columns)
-        else:
-            visualization = {"message": "Dataset too large for live visualization. Summary charts unavailable.", "charts": []}
-            insights = []
+    if full_dataset.get("tooLarge"):
+        sample_page = fetch_dataset_page(dataset_id, limit=MAX_DYNAMIC_VISUALIZATION_ROWS, offset=0)
+        sample_records = sample_page.get("records", [])
+        sample_columns = sample_page.get("columns", [])
+        visualization = infer_visualization([], sample_columns, total_rows=stats.get("rows"))
+        insights = dataset_insights(
+            sample_records,
+            sample_columns,
+            total_rows=stats.get("rows"),
+            sampled=True,
+        )
+    elif not records:
+        visualization = {"message": "No visualization available for this dataset.", "charts": []}
+        insights = []
     else:
-        visualization = infer_visualization(records, columns)
-        insights = dataset_insights(records, columns)
+        visualization = infer_visualization(records, columns, total_rows=stats.get("rows"))
+        insights = dataset_insights(records, columns, total_rows=stats.get("rows"))
+
+    # Cache the visualization for future requests
+    set_visualization_cache(dataset_id, visualization)
 
     return {
         "dataset": enriched,
@@ -234,3 +267,68 @@ def dataset_raw(
         if "429" in str(exc):
             raise HTTPException(status_code=429, detail="data.gov.in rate limit reached. Please retry shortly.") from exc
         raise HTTPException(status_code=502, detail="Failed to fetch dataset from data.gov.in") from exc
+
+
+@router.get("/{sector}/{dataset_id}/visualize")
+def dataset_custom_visualization(
+    sector: str,
+    dataset_id: str,
+    category_column: str = Query(..., description="Name of categorical column for X-axis"),
+    numeric_column: str = Query(..., description="Name of numeric column for Y-axis (values to aggregate)"),
+):
+    """
+    Create a custom visualization for a dataset based on selected columns.
+    
+    Example:
+    - GET /datasets/health/my-dataset/visualize?category_column=Name+of+the+Bank&numeric_column=Total+No.+of+ATMs
+    
+    Constraints:
+    - Dataset must have fewer than 500 rows
+    - Category column must contain string/categorical values
+    - Numeric column must contain numeric values
+    """
+    start_summary_refresh()
+    try:
+        dataset = get_catalog_dataset(sector, dataset_id)
+        if dataset is None:
+            detected_sector, dataset = get_dataset_by_id(dataset_id)
+            if dataset is None:
+                raise HTTPException(status_code=404, detail="Dataset not found")
+            sector = detected_sector or sector
+
+        stats = get_dataset_stats(sector, dataset_id)
+        full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_DYNAMIC_VISUALIZATION_ROWS)
+        
+        records = full_dataset.get("records", [])
+        columns = full_dataset.get("columns", [])
+        
+        # For large datasets, use sample
+        if full_dataset.get("tooLarge"):
+            sample_page = fetch_dataset_page(dataset_id, limit=MAX_DYNAMIC_VISUALIZATION_ROWS, offset=0)
+            records = sample_page.get("records", [])
+            columns = sample_page.get("columns", [])
+        
+        visualization = create_custom_visualization(
+            records,
+            columns,
+            category_column,
+            numeric_column,
+            total_rows=stats.get("rows"),
+        )
+        
+        return {
+            "dataset": dataset,
+            "visualization": visualization,
+            "stats": {
+                "totalRows": stats.get("rows"),
+                "columns": stats.get("columns", []),
+            },
+        }
+        
+    except requests.RequestException as exc:
+        if "429" in str(exc):
+            raise HTTPException(status_code=429, detail="data.gov.in rate limit reached. Please retry shortly.") from exc
+        raise HTTPException(status_code=502, detail="Failed to fetch dataset") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+

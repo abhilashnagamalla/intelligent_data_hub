@@ -23,6 +23,7 @@ export default function Profile() {
   const viewedDatasets = JSON.parse(localStorage.getItem('viewed_datasets') || '[]');
   const downloadCounts = JSON.parse(localStorage.getItem('download_counts') || '{}');
   const totalDownloads = Object.values(downloadCounts).reduce((a, b) => a + b, 0);
+  const memberSince = user.createdAt || user.lastLogin;
 
   const removeFromWishlist = (datasetId) => {
     const key = `wishlist_${userId}`;
@@ -102,17 +103,15 @@ export default function Profile() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
                   <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Member Since')}</div>
-                  <div className="font-bold text-gray-900 dark:text-white">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'N/A'}</div>
+                  <div className="font-bold text-gray-900 dark:text-white">
+                    {memberSince ? new Date(memberSince).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'N/A'}
+                  </div>
                 </div>
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
-                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Account ID')}</div>
-                  <div className="font-bold text-gray-900 dark:text-white text-sm truncate">{user.id?.substring(0, 12) || 'N/A'}...</div>
-                </div>
-                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
-                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Wishlisted')}</div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Wishlist')}</div>
                   <div className="font-bold text-gray-900 dark:text-white">{wishlist.length} {t('datasets')}</div>
                 </div>
               </div>

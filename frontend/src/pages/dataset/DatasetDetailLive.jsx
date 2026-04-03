@@ -5,7 +5,7 @@ import { ArrowLeft, Download, Eye, BarChart3, FileText, ChevronsLeft, ChevronsRi
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DatasetMeta from '../../components/dataset/DatasetMeta';
-import DatasetVisualizer from '../../components/dataset/DatasetVisualizer';
+import DatasetVisualizer from '../../components/dataset/DatasetVisualizerDynamic';
 import useEngagement from '../../hooks/useEngagement';
 
 const PAGE_SIZE = 500;
@@ -230,6 +230,10 @@ export default function DatasetDetailLive() {
     setPageData({ records: [], columns: [], totalRows: 0, totalPages: 1 });
     setPageError('');
   }, [dataset?.id, activeView]);
+
+  useEffect(() => {
+    setVizState({ loading: false, data: null, error: '' });
+  }, [dataset?.id]);
 
   useEffect(() => {
     if (!dataset || !sector || activeView !== 'viz' || vizState.data || vizState.loading) return;

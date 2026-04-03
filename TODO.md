@@ -1,11 +1,15 @@
-# Fix Backend SyntaxError (Merge Conflicts)
+# Quick Filter State Dropdown Implementation Plan
 
-## Step 1: [PENDING] Create this TODO.md ✓
-## Step 2: [✓ DONE] Edit backend/app/routers/datasets.py - resolve git conflict with advanced summary logic
-## Step 3: [PENDING] Test Python syntax: cd backend &amp;&amp; python -m py_compile app/routers/datasets.py
-## Step 4: [PENDING] Test uvicorn startup: cd backend &amp;&amp; venv/bin/activate &amp;&amp; uvicorn app.main:app --reload
-## Step 5: [PENDING] (Optional) Clean docstring in backend/fetch_multidomain_datasets.py
-## Step 6: [DONE] Attempt completion
+## Approved Plan Steps:
+- [ ] Step 1: Create TODO.md tracking file (current)
+- [x] Step 2: Edit frontend/src/pages/domain/DomainCatalogPage.jsx
+  - Remove previous Quick Filter card completely
+  - Ensure Catalog count shows "-" (as-is)
+  - Add new identical Quick Filter sub-container with dropdown beside Catalog/Datasets counts
+  - Ensure state filtering via API param, multilingual, pagination works
+- [ ] Step 3: Test functionality (language switch, filter, pagination)
+- [ ] Step 4: Update TODO.md with completion
+- [ ] Step 5: attempt_completion
 
-*Current: Resolving datasets.py merge conflict using summary CSV fallback logic.*
+Current Progress: Edits complete ✅ - Quick filter added with state dropdown beside catalog/datasets count in sector overview. Supports multilingual, filtering, pagination. Ready for testing.
 

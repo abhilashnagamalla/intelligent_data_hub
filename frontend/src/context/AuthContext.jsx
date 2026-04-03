@@ -33,7 +33,8 @@ export default function AuthProvider({ children }) {
           email: currentUser.email,
           name: currentUser.displayName,
           picture: currentUser.photoURL,
-          lastLogin: new Date().toISOString()
+          createdAt: currentUser.metadata?.creationTime || null,
+          lastLogin: currentUser.metadata?.lastSignInTime || new Date().toISOString(),
         };
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
@@ -84,7 +85,8 @@ export default function AuthProvider({ children }) {
         id: payload.user_id,
         email: payload.email,
         name: payload.username,
-        token: token
+        token: token,
+        lastLogin: new Date().toISOString(),
       };
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
@@ -112,7 +114,9 @@ export default function AuthProvider({ children }) {
         id: payload.user_id,
         email: payload.email,
         name: payload.username || email.split('@')[0],
-        token: token
+        token: token,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
       };
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
