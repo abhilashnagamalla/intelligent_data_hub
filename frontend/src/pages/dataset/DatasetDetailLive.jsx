@@ -156,13 +156,14 @@ export default function DatasetDetailLive() {
       cancelled = true;
       trackedRef.current = false;
     };
-  }, [id, location.state]);
+  }, [id]);  // removed location.state to prevent double-fire on navigation
 
   useEffect(() => {
     if (!dataset || !sector) return;
     let cancelled = false;
 
-    async function loadStatsAndTrack() {
+    // Stagger this request to avoid hitting data.gov.in rate limits
+    const timeoutId = setTimeout(async () => {
       try {
         const statsResponse = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}/stats`);
         if (!cancelled) setStats(statsResponse.data?.stats || null);
@@ -184,11 +185,11 @@ export default function DatasetDetailLive() {
       } catch (statsError) {
         console.error(statsError);
       }
-    }
+    }, 600); // 600ms delay to stagger behind the data page request
 
-    loadStatsAndTrack();
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [dataset, sector, trackView]);
 

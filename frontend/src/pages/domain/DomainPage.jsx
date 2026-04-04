@@ -111,14 +111,14 @@ export default function DomainPage() {
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3 xl:max-w-5xl">
-          <div className="rounded-2xl border-2 border-black p-4">
+          <div className="rounded-xl bg-white dark:bg-gray-900 p-4" style={{ border: '1px solid #d1d5db', borderRadius: '12px', background: '#ffffff' }}>
             <div className="text-xs uppercase tracking-wide text-gray-500">{t('Catalogs')}</div>
             <div className="text-3xl font-black text-gray-900 dark:text-white">
               {catalogLoading ? '...' : stats.catalogs.toLocaleString()}
             </div>
           </div>
 
-          <div className="rounded-2xl border-2 border-black p-4">
+          <div className="rounded-xl bg-white dark:bg-gray-900 p-4" style={{ border: '1px solid #d1d5db', borderRadius: '12px', background: '#ffffff' }}>
             <div className="text-xs uppercase tracking-wide text-gray-500">{t('Datasets')}</div>
             <div className="text-3xl font-black text-gray-900 dark:text-white">
               {catalogLoading ? '...' : stats.datasets.toLocaleString()}

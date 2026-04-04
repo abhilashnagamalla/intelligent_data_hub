@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, MapPin, Navigation } from 'lucide-react';
 
@@ -9,7 +9,7 @@ function detectCoordinateColumns(columns) {
 }
 
 function detectLocationColumn(columns) {
-  return columns.find((column) => /state|district|city|location|village|region|tehsil|block/i.test(column));
+  return columns.find((column) => /state|district|city|location|village|region|tehsil|block|port|area|place|town|zone|country|headquarters|station|taluka|mandal|division/i.test(column));
 }
 
 export default function GeoViewModal({ isOpen, onClose, dataset, records = [], isLoading }) {

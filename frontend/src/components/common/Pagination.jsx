@@ -34,7 +34,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
-          className="btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-secondary px-3 py-2 !border disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={t("First page")}
         >
           <ChevronsLeft className="h-4 w-4" />
@@ -43,7 +43,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-secondary px-3 py-2 !border disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={t("Previous page")}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -55,8 +55,8 @@ export default function Pagination({
             onClick={() => onPageChange(page)}
             className={
               page === currentPage
-                ? "btn-primary min-w-[44px] px-3 py-2"
-                : "btn-secondary min-w-[44px] px-3 py-2"
+                ? "btn-primary min-w-[44px] px-3 py-2 !border"
+                : "btn-secondary min-w-[44px] px-3 py-2 !border"
             }
           >
             {page}
@@ -66,7 +66,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-secondary px-3 py-2 !border disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={t("Next page")}
         >
           <ChevronRight className="h-4 w-4" />
@@ -75,7 +75,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
-          className="btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-secondary px-3 py-2 !border disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={t("Last page")}
         >
           <ChevronsRight className="h-4 w-4" />

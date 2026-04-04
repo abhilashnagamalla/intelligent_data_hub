@@ -9,6 +9,8 @@ import DatasetVisualizer from "../../components/dataset/DatasetVisualizerFixed";
 import useEngagement from "../../hooks/useEngagement";
 import { AuthContext } from "../../context/AuthContextFixed";
 import { UserDataContext } from "../../context/UserDataContext";
+import GeoViewModal from "../../components/dataset/GeoViewModalMap";
+import { Map, Loader2 } from "lucide-react";
 
 const PAGE_SIZE = 250;
 
@@ -35,6 +37,9 @@ export default function DatasetDetailPage() {
   const [tableState, setTableState] = useState({ records: [], columns: [], totalPages: 1 });
   const [visualization, setVisualization] = useState({ loading: false, data: null });
   const [loading, setLoading] = useState(true);
+  const [showGeoModal, setShowGeoModal] = useState(false);
+  const [isGeoLoading, setIsGeoLoading] = useState(false);
+  const [geoRecords, setGeoRecords] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,6 +149,24 @@ export default function DatasetDetailPage() {
     };
   }, [dataset?.id]);
 
+  const handleGeoView = async () => {
+    setShowGeoModal(true);
+    if (geoRecords.length > 0 || isGeoLoading) return;
+
+    setIsGeoLoading(true);
+    try {
+      const response = await api.get(`/datasets/data/${encodeURIComponent(dataset.id)}`, {
+        params: { limit: 500, offset: 0 },
+      });
+      setGeoRecords(response.data?.records || []);
+    } catch (error) {
+      console.error("Geo fetch failed", error);
+      setGeoRecords([]);
+    } finally {
+      setIsGeoLoading(false);
+    }
+  };
+
   const rawPreview = useMemo(
     () => csvPreview(tableState.records, tableState.columns),
     [tableState.columns, tableState.records],
@@ -161,6 +184,7 @@ export default function DatasetDetailPage() {
     { key: "table", icon: Table2, label: t("View Details") },
     { key: "raw", icon: Eye, label: t("Raw View") },
     { key: "viz", icon: BarChart3, label: t("Visualization") },
+    { key: "geo", icon: Map, label: t("Geo View") },
   ];
 
   return (
@@ -225,11 +249,18 @@ export default function DatasetDetailPage() {
             <button
               key={action.key}
               type="button"
-              onClick={() => setActiveView(action.key)}
+              onClick={() => {
+                if (action.key === "geo") {
+                  handleGeoView();
+                } else {
+                  setActiveView(action.key);
+                }
+              }}
               className={action.key === activeView ? "btn-primary" : "btn-secondary"}
             >
               <action.icon className="h-4 w-4" />
               {action.label}
+              {action.key === "geo" && isGeoLoading && <Loader2 className="h-3 w-3 animate-spin" />}
             </button>
           ))}
           <button
@@ -311,6 +342,14 @@ export default function DatasetDetailPage() {
           )}
         </div>
       </section>
+
+      <GeoViewModal
+        isOpen={showGeoModal}
+        onClose={() => setShowGeoModal(false)}
+        dataset={dataset}
+        records={geoRecords || []}
+        isLoading={isGeoLoading}
+      />
     </div>
   );
 }

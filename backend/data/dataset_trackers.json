@@ -1,7 +1,11 @@
 {
   "agriculture:0accb56b-525f-4408-a45b-67d4bd25bdc2": {
+    "downloads": 1,
+    "views": 24
+  },
+  "agriculture:28b9e875-1e50-4b23-96e0-5085472f38a1": {
     "downloads": 0,
-    "views": 6
+    "views": 1
   },
   "agriculture:2e0e6c04-97f2-456b-9309-bf605650cb11": {
     "downloads": 0,
@@ -13,14 +17,30 @@
   },
   "agriculture:61a38b45-4b61-4896-828f-6614aa510d18": {
     "downloads": 0,
-    "views": 1
+    "views": 2
   },
   "agriculture:7e45c9cd-e3ea-4a0b-800a-645d40066aee": {
     "downloads": 1,
     "views": 2
   },
+  "agriculture:8312cf0e-bc91-45b2-b2fb-6f3627357485": {
+    "downloads": 0,
+    "views": 1
+  },
+  "agriculture:8d2d252f-6306-40ad-a8c1-6db87c6b2c05": {
+    "downloads": 0,
+    "views": 1
+  },
+  "agriculture:eede411f-1c49-4b02-b50c-6e9ac431f289": {
+    "downloads": 0,
+    "views": 2
+  },
   "agriculture:f5fc3381-dfca-4b22-bf10-dd8f03996b05": {
     "downloads": 1,
+    "views": 2
+  },
+  "census:0fa810a8-e3c5-4417-9e82-a34a9c49a4b0": {
+    "downloads": 0,
     "views": 1
   },
   "census:3b719ec2-4b33-4fbc-93f1-b069bf427cc8": {
@@ -55,7 +75,19 @@
     "downloads": 0,
     "views": 3
   },
+  "finance:32505376-d1ac-4904-9c96-986eacee0d81": {
+    "downloads": 0,
+    "views": 1
+  },
+  "finance:370796b4-d67d-48a2-acb6-f3a29a3fdef8": {
+    "downloads": 0,
+    "views": 3
+  },
   "finance:c5795094-91a9-449e-9652-cbffbff6e330": {
+    "downloads": 0,
+    "views": 2
+  },
+  "finance:df42edbe-90df-408f-81e0-41e5d153afc0": {
     "downloads": 0,
     "views": 1
   },
@@ -75,6 +107,10 @@
     "downloads": 0,
     "views": 1
   },
+  "health:8ee4400d-7f8b-465f-938f-c1ad3af9b0db": {
+    "downloads": 0,
+    "views": 1
+  },
   "health:b6e37ccd-e17b-455a-bfe4-edb9923e5b21": {
     "downloads": 0,
     "views": 1
@@ -83,6 +119,10 @@
     "downloads": 0,
     "views": 4
   },
+  "health:c7b231e9-b349-4bd8-a8eb-3c1f2c0c1db7": {
+    "downloads": 0,
+    "views": 2
+  },
   "health:c99af7f6-67bd-452e-8b25-ee69c7750eb3": {
     "downloads": 0,
     "views": 1
@@ -90,6 +130,10 @@
   "health:e259e0c7-8e81-4805-a69c-dbecf9a04429": {
     "downloads": 0,
     "views": 2
+  },
+  "health:f55f64f0-3511-475a-9975-82485150933b": {
+    "downloads": 0,
+    "views": 3
   },
   "transport:4e1b744d-d771-4b8a-a979-522f6c3b721c": {
     "downloads": 0,

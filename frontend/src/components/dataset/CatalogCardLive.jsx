@@ -35,12 +35,18 @@ export default function CatalogCardLive({ dataset, onView }) {
 
   useEffect(() => {
     if (!sectorKey || !dataset.id) return;
-    api.get(`/datasets/${sectorKey}/${encodedDatasetId}/stats`)
-      .then((res) => {
-        setViews(res.data?.stats?.views ?? 0);
-        setDownloads(res.data?.stats?.downloads ?? 0);
-      })
-      .catch(() => {});
+    // Stagger stats requests with a random delay to avoid 429 rate limits
+    // when multiple cards load simultaneously
+    const delay = Math.random() * 2000; // 0-2s random spread
+    const timeoutId = setTimeout(() => {
+      api.get(`/datasets/${sectorKey}/${encodedDatasetId}/stats`)
+        .then((res) => {
+          setViews(res.data?.stats?.views ?? 0);
+          setDownloads(res.data?.stats?.downloads ?? 0);
+        })
+        .catch(() => {});
+    }, delay);
+    return () => clearTimeout(timeoutId);
   }, [sectorKey, dataset.id, encodedDatasetId]);
 
   const toggleBookmark = (event) => {
@@ -89,10 +95,32 @@ export default function CatalogCardLive({ dataset, onView }) {
       whileHover={{ y: -2 }}
 className="bg-white dark:bg-gray-950 rounded-2xl p-6 shadow-md hover:shadow-xl border-2 border-black h-full flex flex-col relative"
     >
-      {/* Bookmark button only */}
-      <div className="absolute top-4 right-4 z-10">
-        <button onClick={toggleBookmark} className={`rounded-xl border-2 border-black p-2 transition-all ${isBookmarked ? 'bg-amber-100 text-amber-600' : 'bg-white text-gray-500 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800'}`} title={isBookmarked ? 'Remove from Wishlist' : 'Add to Wishlist'}>
-          <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+      {/* Minimal Bookmark button */}
+      <div className="absolute top-5 right-5 z-10">
+        <button
+          onClick={toggleBookmark}
+          className={`group relative p-2 transition-all duration-300 ${
+            isBookmarked 
+              ? (sectorKey === 'agriculture' ? 'text-emerald-600' :
+                 sectorKey === 'census' ? 'text-blue-600' :
+                 sectorKey === 'education' ? 'text-purple-600' :
+                 sectorKey === 'finance' ? 'text-amber-600' :
+                 sectorKey === 'health' ? 'text-rose-600' :
+                 sectorKey === 'transport' ? 'text-indigo-600' : 'text-blue-600')
+              : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'
+          }`}
+          title={isBookmarked ? t('Remove from Wishlist') : t('Add to Wishlist')}
+        >
+          {/* Subtle sector-based hover background */}
+          <div className={`absolute inset-0 rounded-full opacity-0 transition-opacity group-hover:opacity-10 ${
+            sectorKey === 'agriculture' ? 'bg-emerald-600' :
+            sectorKey === 'census' ? 'bg-blue-600' :
+            sectorKey === 'education' ? 'bg-purple-600' :
+            sectorKey === 'finance' ? 'bg-amber-600' :
+            sectorKey === 'health' ? 'bg-rose-600' :
+            sectorKey === 'transport' ? 'bg-indigo-600' : 'bg-blue-600'
+          }`} />
+          <Bookmark className={`relative w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${isBookmarked ? 'fill-current' : ''}`} />
         </button>
       </div>
 
@@ -106,17 +134,26 @@ className="bg-white dark:bg-gray-950 rounded-2xl p-6 shadow-md hover:shadow-xl b
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-        <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3">
+        <div className="rounded-xl border border-[#d1d5db] dark:border-gray-700 bg-white dark:bg-gray-900 p-3" style={{ borderWidth: '1px' }}>
           <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Published Date')}</div>
           <div className="font-semibold text-gray-900 dark:text-white">{formatDate(dataset.publishedDate)}</div>
         </div>
         <button
           type="button"
           onClick={handleGeoView}
-          className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3 text-left transition-colors hover:bg-[var(--surface-muted)]/60"
+          className="rounded-xl border border-[#d1d5db] dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+          style={{ borderWidth: '1px' }}
         >
           <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('Geo View')}</div>
-          <div className="font-semibold text-emerald-600 flex items-center gap-2">
+          <div className={`font-semibold flex items-center gap-2 ${
+            sectorKey === 'agriculture' ? 'text-emerald-600' :
+            (sectorKey === 'census' || sectorKey.includes('surv')) ? 'text-blue-600' :
+            sectorKey === 'education' ? 'text-purple-600' :
+            sectorKey === 'finance' ? 'text-amber-600' :
+            (sectorKey === 'health' || sectorKey.includes('family')) ? 'text-rose-600' :
+            sectorKey === 'transport' ? 'text-indigo-600' :
+            'text-blue-600'
+          }`}>
             {isGeoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Map className="w-4 h-4" />}
             {t('Dataset Only')}
           </div>
@@ -124,11 +161,11 @@ className="bg-white dark:bg-gray-950 rounded-2xl p-6 shadow-md hover:shadow-xl b
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6 text-sm">
-        <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3">
+        <div className="rounded-xl border border-[#d1d5db] dark:border-gray-700 bg-white dark:bg-gray-900 p-3" style={{ borderWidth: '1px' }}>
           <div className="flex items-center gap-2 text-gray-500 mb-1"><Eye className="w-4 h-4" />{t('Views')}</div>
           <div className="font-bold text-green-600 text-lg">{views.toLocaleString()}</div>
         </div>
-        <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-3">
+        <div className="rounded-xl border border-[#d1d5db] dark:border-gray-700 bg-white dark:bg-gray-900 p-3" style={{ borderWidth: '1px' }}>
           <div className="flex items-center gap-2 text-gray-500 mb-1"><Download className="w-4 h-4" />{t('Downloads')}</div>
           <div className="font-bold text-blue-600 text-lg">{downloads.toLocaleString()}</div>
         </div>
