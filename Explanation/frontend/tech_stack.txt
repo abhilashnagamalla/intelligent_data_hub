@@ -1,0 +1,29 @@
+Frontend:
+
+- React 18 → UI library with hooks/contexts
+- Vite → Build tool/dev server (fast HMR)
+- React Router DOM 7 → Client-side routing
+- Tailwind CSS 3 → Utility-first CSS framework (custom theme/colors/shadows/animations)
+- Axios → HTTP client for API calls (proxied to backend)
+- Firebase 12 → Authentication (AuthContext)
+- i18next + react-i18next → Internationalization (multi-language support)
+- Lucide React → Icons library
+- Charts/Visualizations:
+  * Chart.js + react-chartjs-2 → General charts
+  * Recharts → Composable charts
+  * react-simple-maps → Geo maps (india.topo.json)
+- Framer Motion → UI animations/transitions
+- PapaParse → CSV parsing
+- React hooks/contexts for state (Auth/Theme/Datasets/Domain/UserData)
+
+Development:
+- ESLint + React hooks plugin → Linting
+- PostCSS/Autoprefixer → CSS processing
+- Docker → Containerization
+
+Other:
+- Proxy API calls to backend:8000
+- Dark mode + theme context
+- Protected routes
+
+validation

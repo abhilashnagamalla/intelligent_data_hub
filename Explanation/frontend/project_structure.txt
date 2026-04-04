@@ -1,0 +1,102 @@
+frontend/
+├── .gitignore
+├── Dockerfile
+├── eslint.config.js
+├── index.html
+├── postcss.config.js
+├── tailwind.config.js
+├── vite.config.js
+├── public/
+│   ├── india.json
+│   ├── india.topo.json
+│   ├── robots.txt
+│   └── site.webmanifest
+├── src/
+│   ├── api.js
+│   ├── App.jsx
+│   ├── index.css
+│   ├── main.jsx
+│   ├── assets/
+│   │   └── react.svg
+│   ├── components/
+│   │   ├── auth/
+│   │   │   ├── AuthCard.jsx
+│   │   │   ├── AuthForm.jsx
+│   │   │   └── AuthPanel.jsx
+│   │   ├── common/
+│   │   │   ├── AppSidebar.jsx
+│   │   │   ├── Header.jsx
+│   │   │   ├── HeaderBar.jsx
+│   │   │   ├── Layout.jsx
+│   │   │   ├── Pagination.jsx
+│   │   │   └── Sidebar.jsx
+│   │   ├── dataset/
+│   │   │   ├── CatalogCard.jsx
+│   │   │   ├── CatalogCardLive.jsx
+│   │   │   ├── DataPreviewModal.jsx
+│   │   │   ├── DatasetCatalogCard.jsx
+│   │   │   ├── DatasetMeta.jsx
+│   │   │   ├── DatasetVisualizer.jsx
+│   │   │   ├── DatasetVisualizerDynamic.jsx
+│   │   │   ├── DatasetVisualizerFixed.jsx
+│   │   │   ├── GeoViewModal.jsx
+│   │   │   ├── GeoViewModalMap.jsx
+│   │   │   ├── ResourceCard.jsx
+│   │   │   ├── SectorVisualizer.jsx
+│   │   │   └── SparklineChart.jsx
+│   │   ├── domain/
+│   │   │   ├── DomainCard.jsx
+│   │   │   ├── DomainOverviewCard.jsx
+│   │   │   └── DomainStats.jsx
+│   │   └── ui/
+│   │       ├── DarkModeToggle.jsx
+│   │       ├── LanguageControl.jsx
+│   │       ├── LanguageSelector.jsx
+│   │       ├── ProfileDropdown.jsx
+│   │       ├── ThemeToggleSwitch.jsx
+│   │       └── UserMenu.jsx
+│   ├── constants/
+│   │   ├── languages.js
+│   │   ├── sectors.js
+│   │   └── states.js
+│   ├── context/
+│   │   ├── AuthContext.jsx
+│   │   ├── AuthContextFixed.jsx
+│   │   ├── DatasetsContext.jsx
+│   │   ├── DomainContext.jsx
+│   │   ├── ThemeContext.jsx
+│   │   └── UserDataContext.jsx
+│   ├── hooks/
+│   │   └── useEngagement.js
+│   ├── pages/
+│   │   ├── Landing.jsx
+│   │   ├── LandingPage.jsx
+│   │   ├── auth/
+│   │   │   ├── Login.jsx
+│   │   │   ├── LoginPage.jsx
+│   │   │   └── RegisterPage.jsx
+│   │   ├── chatbot/
+│   │   │   └── Chatbot.jsx
+│   │   ├── dashboard/
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── DashboardPage.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   ├── ProfilePage.jsx
+│   │   │   ├── Settings.jsx
+│   │   │   └── SettingsPage.jsx
+│   │   ├── dataset/
+│   │   │   ├── DatasetCatalogPage.jsx
+│   │   │   ├── DatasetDetailLive.jsx
+│   │   │   ├── DatasetDetailPage.jsx
+│   │   │   └── DatasetPage.jsx
+│   │   └── domain/
+│   │       ├── DomainCatalogPage.jsx
+│   │       └── DomainPage.jsx
+│   ├── services/
+│   │   └── firebase.js
+│   ├── styles/
+│   │   └── global.css
+│   └── utils/
+│       ├── i18n.js
+│       └── i18nFixed.js
+

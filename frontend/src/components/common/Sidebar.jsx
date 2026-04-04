@@ -141,10 +141,10 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
       <nav className="flex-1 p-3 sm:p-4 space-y-1 overflow-y-auto">
         <button
           onClick={() => handleNav('/dashboard')}
-          className={`w-full flex items-center gap-3 rounded-2xl border-2 border-black p-3 sm:p-4 transition-all group hover:bg-primary/20 ${
+          className={`w-full flex items-center gap-3 rounded-2xl border-2 border-black p-3 sm:p-4 text-left text-white transition-colors ${
             isActive('/dashboard') && !isActive('/chatbot')
-              ? 'bg-primary/30 shadow-glow font-semibold'
-              : 'hover:shadow-glow'
+              ? 'bg-primary/20 font-semibold'
+              : 'bg-transparent'
           }`}
         >
           <LayoutDashboard className="w-5 sm:w-6 h-5 sm:h-6 flex-shrink-0" />
@@ -189,8 +189,8 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
 
         <button
           onClick={() => handleNav('/dashboard/chatbot')}
-          className={`w-full flex items-center gap-3 rounded-2xl border-2 border-black p-3 sm:p-4 transition-all group hover:bg-accent/20 ${
-            isActive('/chatbot') ? 'bg-accent/30 shadow-glow font-semibold' : 'hover:shadow-glow'
+          className={`w-full flex items-center gap-3 rounded-2xl border-2 border-black p-3 sm:p-4 text-left text-white transition-colors ${
+            isActive('/chatbot') ? 'bg-accent/20 font-semibold' : 'bg-transparent'
           }`}
         >
           <MessageCirclePlus className="w-5 sm:w-6 h-5 sm:h-6 flex-shrink-0" />

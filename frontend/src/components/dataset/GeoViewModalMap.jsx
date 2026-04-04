@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import { X, Loader2, MapPin, Navigation, Search, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const INDIA_MAP_URL = '/india.topo.json';
 
@@ -451,6 +452,7 @@ function Legend({ label, theme }) {
 
 /* ═══════════ MAIN COMPONENT ═══════════ */
 export default function GeoViewModalMap({ isOpen, onClose, dataset, records = [], isLoading }) {
+  const { t } = useTranslation();
   const theme = getSectorTheme(dataset);
   const [selectedState, setSelectedState] = useState(null);
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, name: '' });
@@ -698,7 +700,7 @@ export default function GeoViewModalMap({ isOpen, onClose, dataset, records = []
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-950 z-10">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Geo View</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Geo View')}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Interactive India map with dataset-driven geographic values.</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors">

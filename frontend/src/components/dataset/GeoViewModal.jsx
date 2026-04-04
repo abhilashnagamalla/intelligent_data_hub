@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, MapPin, Navigation } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 function detectCoordinateColumns(columns) {
   const latitude = columns.find((column) => /^(lat|latitude)$/i.test(column) || /latitude/i.test(column));
@@ -13,6 +14,7 @@ function detectLocationColumn(columns) {
 }
 
 export default function GeoViewModal({ isOpen, onClose, dataset, records = [], isLoading }) {
+  const { t } = useTranslation();
   const geoData = useMemo(() => {
     if (!records.length) {
       return { type: 'empty', points: [], groups: [] };
@@ -67,7 +69,7 @@ export default function GeoViewModal({ isOpen, onClose, dataset, records = [], i
       <div className="relative z-10 w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-gray-950 border border-black shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-950 z-10">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Geo View</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Geo View')}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Rendered strictly from dataset values only.</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors">

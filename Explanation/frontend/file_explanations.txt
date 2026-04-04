@@ -1,0 +1,105 @@
+venvFile: index.html
+Location: frontend/index.html
+Purpose: App entry HTML.
+Key Components: #root div for React.
+Interactions: Vite bundles JS here.
+
+File: vite.config.js
+Location: frontend/vite.config.js
+Purpose: Vite config.
+Key Components: React plugin, API proxy localhost:8000, CORS headers.
+Interactions: Dev/build server.
+
+File: tailwind.config.js
+Location: frontend/tailwind.config.js
+Purpose: Tailwind theme config.
+Key Components: Custom colors (primary/secondary), shadows (glass/glow), animations (pulse-glow).
+Interactions: Global CSS.
+
+File: src/App.jsx
+Location: frontend/src/App.jsx
+Purpose: Main app router.
+Key Components: Routes for landing/datasets/domains/dashboard/auth/chatbot, ProtectedRoute wrapper.
+Interactions: All pages.
+
+File: src/main.jsx
+Location: frontend/src/main.jsx
+Purpose: React root render.
+Key Components: Theme/Auth/i18n providers, BrowserRouter.
+Interactions: App.jsx.
+
+File: src/api.js
+Location: frontend/src/api.js
+Purpose: Axios instance for backend API.
+Key Components: baseURL with Vite env/dev proxy.
+Interactions: All pages/components fetch data.
+
+File: DatasetCatalogPage.jsx etc (pages/dataset/*)
+Location: frontend/src/pages/dataset/
+Purpose: Dataset catalog/search/pagination/detail pages.
+Key Components: Search by q/sector/state, paginate, DatasetCatalogCard.
+Interactions: /datasets/all/search/{sector}, Dataset* components.
+
+File: DomainCatalogPage.jsx DomainPage.jsx (pages/domain/*)
+Location: frontend/src/pages/domain/
+Purpose: Sector/domain catalogs/pages.
+Interactions: /domains, /datasets/{sector}.
+
+File: Dashboard/Profile/Settings/Chatbot (pages/dashboard/* pages/chatbot/*)
+Location: frontend/src/pages/dashboard/ etc.
+Purpose: Protected user dashboard pages.
+Interactions: AuthContext, API profile/chat.
+
+File: Auth/Login/Register (pages/auth/*)
+Location: frontend/src/pages/auth/
+Purpose: Auth forms/pages.
+Interactions: Firebase auth.
+
+File: Dataset visualizers (components/dataset/*)
+Location: frontend/src/components/dataset/
+Purpose: Dataset cards/modals/visualizers/maps/charts.
+Key Components: CatalogCard(Live), DatasetVisualizer(Dynamic/Fixed), GeoViewModal, SparklineChart, SectorVisualizer.
+Interactions: Charts (Recharts/ChartJS), maps, CSV preview.
+
+File: Domain components (components/domain/*)
+Location: frontend/src/components/domain/
+Purpose: Domain/sector cards/stats/overview.
+Interactions: /domains stats.
+
+File: UI components (components/ui/*)
+Location: frontend/src/components/ui/
+Purpose: Reusable UI: Theme/DarkModeToggle, LanguageSelector, ProfileDropdown etc.
+Interactions: Header/Layout.
+
+File: Layout/Sidebar/Header/Pagination (components/common/*)
+Location: frontend/src/components/common/
+Purpose: App layout components.
+Interactions: All pages.
+
+File: Auth components (components/auth/*)
+Location: frontend/src/components/auth/
+Purpose: Auth UI panels/cards/forms.
+Interactions: Auth pages/context.
+
+File: Constants (constants/*)
+Location: frontend/src/constants/
+Purpose: sectors.js states.js languages.js.
+Interactions: Filters/search/pages.
+
+File: Contexts (context/*)
+Location: frontend/src/context/
+Purpose: Global state: Auth(Dynamic/Fixed), Datasets, Domain, Theme, UserData.
+Interactions: Providers/hooks.
+
+File: firebase.js (services/)
+Location: frontend/src/services/firebase.js
+Purpose: Firebase config/init.
+Interactions: AuthContext.
+
+File: i18n.js/utils (utils/)
+Location: frontend/src/utils/
+Purpose: Internationalization setup.
+Interactions: main.jsx provider.
+
+Other components/files: Specialized UI/charts/geo/views for data hub features.
+

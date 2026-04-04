@@ -67,12 +67,12 @@ function Pagination({ page, totalPages, onPageChange, disabled }) {
 
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
-      <div className="text-sm text-gray-500">{t('Page')} {page} {t('of')} {totalPages} • 500 {t('rows per page')}</div>
+      <div className="text-sm text-gray-500 dark:text-gray-400">{t('Page')} {page} {t('of')} {totalPages} • 500 {t('Rows per page')}</div>
       <div className="flex items-center gap-1">
-        <button onClick={() => onPageChange(1)} disabled={page === 1 || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="First">
+        <button onClick={() => onPageChange(1)} disabled={page === 1 || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title={t('First page')}>
           <ChevronsLeft className="w-4 h-4" />
         </button>
-        <button onClick={() => onPageChange(page - 1)} disabled={page === 1 || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Previous">
+        <button onClick={() => onPageChange(page - 1)} disabled={page === 1 || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title={t('Previous page')}>
           <ChevronLeft className="w-4 h-4" />
         </button>
 
@@ -95,10 +95,10 @@ function Pagination({ page, totalPages, onPageChange, disabled }) {
           )
         )}
 
-        <button onClick={() => onPageChange(page + 1)} disabled={page === totalPages || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Next">
+        <button onClick={() => onPageChange(page + 1)} disabled={page === totalPages || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title={t('Next page')}>
           <ChevronRight className="w-4 h-4" />
         </button>
-        <button onClick={() => onPageChange(totalPages)} disabled={page === totalPages || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="Last">
+        <button onClick={() => onPageChange(totalPages)} disabled={page === totalPages || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title={t('Last page')}>
           <ChevronsRight className="w-4 h-4" />
         </button>
       </div>
@@ -356,19 +356,19 @@ export default function DatasetDetailLive() {
       {/* Stats Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2">{t('Rows')}</div>
+          <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">{t('Rows')}</div>
           <div className="text-2xl font-black text-gray-900 dark:text-white">{(stats?.rows || dataset.numberOfRows || 0).toLocaleString()}</div>
         </div>
         <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2">{t('Columns')}</div>
+          <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">{t('Columns')}</div>
           <div className="text-2xl font-black text-gray-900 dark:text-white">{stats?.columnCount || dataset.numberOfColumns || stats?.columns?.length || 0}</div>
         </div>
         <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Eye className="w-4 h-4" />{t('Views')}</div>
+          <div className="mb-2 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"><Eye className="w-4 h-4" />{t('Views')}</div>
           <div className="text-2xl font-black text-green-600">{(stats?.views ?? dataset.views ?? 0).toLocaleString()}</div>
         </div>
         <div className="rounded-2xl border-2 border-black p-5 bg-white dark:bg-gray-950">
-          <div className="text-sm text-gray-500 mb-2 flex items-center gap-2"><Download className="w-4 h-4" />{t('Downloads')}</div>
+          <div className="mb-2 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"><Download className="w-4 h-4" />{t('Downloads')}</div>
           <div className="text-2xl font-black text-blue-600">{(stats?.downloads ?? dataset.downloads ?? 0).toLocaleString()}</div>
         </div>
       </section>

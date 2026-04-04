@@ -1,0 +1,182 @@
+File: analyze_datasets.py
+Location: backend/analyze_datasets.py
+Purpose: Data analysis script for datasets (likely exploratory/testing).
+Key Components: Custom analysis functions (not read, inferred from name).
+Interactions: Uses dataset_catalog services.
+
+File: call_api.py
+Location: backend/call_api.py
+Purpose: Wrapper/utility for API calls (data.gov.in?).
+Interactions: Shared API helper.
+
+File: cols.txt
+Location: backend/cols.txt
+Purpose: List of common dataset columns.
+Interactions: Reference for visualization/processing.
+
+File: create_table.py
+Location: backend/create_table.py
+Purpose: Generates table schemas or DB tables from datasets.
+Interactions: Database setup.
+
+File: Dockerfile
+Location: backend/Dockerfile
+Purpose: Docker image definition for backend service.
+Interactions: Deployment.
+
+File: fetch_multidomain_datasets.py
+Location: backend/fetch_multidomain_datasets.py
+Purpose: Fetches datasets across multiple domains/sectors.
+Key Components: Multi-sector API calls.
+Interactions: Populates datasets.json.
+
+File: generate_datasets_json.py
+Location: backend/generate_datasets_json.py
+Purpose: Generates datasets.json catalog from API.
+Interactions: dataset_catalog load_catalogs().
+
+File: generate_full_datasets_json.py
+Location: backend/generate_full_datasets_json.py
+Purpose: Full catalog generation script.
+Interactions: Complete sync.
+
+File: generate_real_datasets.py
+Location: backend/generate_real_datasets.py
+Purpose: Fetches/parses real data.gov.in datasets.
+Interactions: API + local storage.
+
+File: inspect_datasets.py
+Location: backend/inspect_datasets.py
+Purpose: Inspects dataset structure/metadata.
+Interactions: Testing/debug.
+
+File: requirements.txt
+Location: backend/requirements.txt
+Purpose: Python dependencies list.
+Interactions: pip install.
+
+File: resrc_extract.py
+Location: backend/resrc_extract.py
+Purpose: Extracts resources from CKAN API responses.
+Interactions: dataset_catalog.
+
+File: sync_summaries.py
+Location: backend/sync_summaries.py
+Purpose: Syncs sector summary CSVs.
+Interactions: write_sector_summary().
+
+File: test_list_datasets.py
+Location: backend/test_list_datasets.py
+Purpose: Tests dataset listing/pagination.
+Interactions: Unit tests.
+
+File: test_visualization_engine.py
+Location: backend/test_visualization_engine.py
+Purpose: Tests viz inference/creation.
+Key Components: infer_visualization(), create_custom_visualization().
+Interactions: dataset_visualizer.py.
+
+File: working.py
+Location: backend/working.py
+Purpose: Working/experimental script.
+Interactions: Prototyping.
+
+File: app/config.py
+Location: backend/app/config.py
+Purpose: App settings from .env (OpenAI key).
+Key Components: Pydantic Settings class.
+Interactions: Imported globally.
+
+File: app/dependencies.py
+Location: backend/app/dependencies.py
+Purpose: FastAPI dependencies (auth/DB).
+Interactions: Router injections.
+
+File: app/main.py
+Location: backend/app/main.py
+Purpose: Main FastAPI app entry.
+Key Components: create_app(), CORS middleware, router includes (/datasets /domains /chatbot /auth), startup summary refresh.
+Interactions: All routers/services.
+
+File: app/schemas.py
+Location: backend/app/schemas.py
+Purpose: Pydantic models (e.g. ChatRequest).
+Interactions: API validation.
+
+File: app/routers/auth.py
+Location: backend/app/routers/auth.py
+Purpose: Authentication endpoints.
+Key Components: Login/register with Firebase.
+Interactions: firebase_identity.py.
+
+File: app/routers/chatbot.py
+Location: backend/app/routers/chatbot.py
+Purpose: Chatbot query endpoints.
+Interactions: chatbot_service.py, OpenAI.
+
+File: app/routers/dataset_explainer.py
+Location: backend/app/routers/dataset_explainer.py
+Purpose: Dataset insights/explainer API.
+Interactions: dataset_explainer.py.
+
+File: app/routers/datasets.py
+Location: backend/app/routers/datasets.py
+Purpose: Core datasets endpoints (/search /data/{id} /by-id/{id} /{sector} stats view/download raw visualize).
+Key Components: get_all/search/fetch_page/full/stats/increment_tracker/analysis/raw/custom_viz.
+Interactions: dataset_catalog.py (fetch/enrich/search/viz/insights).
+
+File: app/routers/domains.py
+Location: backend/app/routers/domains.py
+Purpose: Domain/sector stats (/).
+Key Components: domain_stats().
+Interactions: dataset_catalog.py.
+
+File: app/services/chatbot_service.py
+Location: backend/app/services/chatbot_service.py
+Purpose: OpenAI-powered chatbot logic.
+Interactions: datasets/chat.
+
+File: app/services/data_service.py
+Location: backend/app/services/data_service.py
+Purpose: General data handling.
+Interactions: Shared.
+
+File: app/services/dataset_catalog.py
+Location: backend/app/services/dataset_catalog.py
+Purpose: Main service - data.gov.in integration, caching, search/state filter, viz engine.
+Key Components: load_catalogs/sector_datasets/search/fetch_page/full/stream_csv/get_stats/infer_visualization/dataset_insights/create_custom_visualization/domain_stats/summary refresh.
+Interactions: All datasets/domains routers, caching (JSON/DB), API proxy.
+
+File: app/services/dataset_explainer.py
+Location: backend/app/services/dataset_explainer.py
+Purpose: Advanced dataset analysis (NLP/ML?).
+Interactions: explainer router.
+
+File: app/services/dataset_visualizer.py
+Location: backend/app/services/dataset_visualizer.py
+Purpose: Visualization generation/caching.
+Interactions: infer_visualization calls.
+
+File: app/services/firebase_identity.py
+Location: backend/app/services/firebase_identity.py
+Purpose: Firebase auth verification.
+Interactions: auth router.
+
+File: app/services/json_user_store.py
+Location: backend/app/services/json_user_store.py
+Purpose: JSON-based user persistence.
+Interactions: user_store.py.
+
+File: app/services/resource_discovery.py
+Location: backend/app/services/resource_discovery.py
+Purpose: Dataset/resource search/discovery.
+Interactions: catalog.
+
+File: app/services/user_store.py
+Location: backend/app/services/user_store.py
+Purpose: User management abstraction.
+Interactions: profile/auth.
+
+Data files (backend/data/): JSON/DB for catalogs/trackers/users/metadata caches. Ignored binaries.
+Summary files (backend/summary/): Pre-computed CSV metadata per sector for fast catalogs.
+

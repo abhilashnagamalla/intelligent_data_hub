@@ -1,0 +1,50 @@
+Useless files that don't affect project runtime/production (docs, notes, temps, unused):
+
+# Documentation and Guides (.md files)
+IMPLEMENTATION_GUIDE.md
+CUSTOM_COLUMN_VISUALIZATION.md
+CUSTOM_VIZ_TESTING.md
+STATE_FILTER_FEATURE.md
+VISUALIZATION_PERFORMANCE_OPTIMIZATION.md
+VISUALIZATION_ENGINE_SUMMARY.md
+VISUALIZATION_ENGINE_EXAMPLES.md
+VISUALIZATION_ENGINE_IMPLEMENTATION.md
+TODO.md
+frontend/TODO.md
+frontend/src/pages/TODO.md
+
+# Setup and Structure Docs
+setup.txt
+proj_structure.txt
+
+# Explanation Docs (entire folder)
+Explanation/backend/project_structure.txt
+Explanation/backend/tech_stack.txt
+Explanation/backend/file_explanations.txt
+Explanation/frontend/project_structure.txt
+Explanation/frontend/tech_stack.txt
+Explanation/frontend/file_explanations.txt
+
+# Build/Logs
+frontend/build_output.txt
+
+# Temp/Journal Files (auto-generated)
+backend/data/idh.db-journal
+backend/data/idh.sqlite3-journal
+backend/data/sqlite_probe.db-journal
+backend/data/user_store.tmp
+backend/summary/*.tmp
+
+# Potentially Unused Scripts (non-core, experimental)
+fix_dates.py
+test_data_structure.py
+backend/resrc_extract.py
+backend/cols.txt
+backend/manual_probe.txt
+backend/package.json  # frontend-like in backend?
+backend/package-lock.json  # frontend-like in backend?
+
+# VSCode Notes (if any)
+proj_structure.txt  # duplicate?
+
+Note: Core source code, data JSON/DBs, configs, Dockerfiles excluded as they affect the project.

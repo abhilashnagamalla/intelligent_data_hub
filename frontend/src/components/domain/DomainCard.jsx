@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { HeartPulse, GraduationCap, Truck, Apple, FileBarChart, DollarSign, Database, Library, Download, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatSectorLabel } from '../../constants/sectors';
 
 const domainConfig = {
   health: {
@@ -69,6 +70,7 @@ export default function DomainCard({ domain, onClick }) {
   const config = domainConfig[domain.sector.toLowerCase()] || domainConfig.health;
   const Icon = config.icon;
   const { t } = useTranslation();
+  const title = t(formatSectorLabel(domain.sector || config.name));
 
   return (
     <motion.div
@@ -90,8 +92,8 @@ export default function DomainCard({ domain, onClick }) {
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-lg leading-tight">{t(config.name)}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{config.desc}</p>
+            <h3 className="font-bold text-lg leading-tight">{title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t(config.desc)}</p>
           </div>
         </div>
 

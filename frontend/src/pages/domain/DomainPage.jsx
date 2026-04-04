@@ -34,9 +34,14 @@ export default function DomainPage() {
     [i18n.language, i18n.resolvedLanguage],
   );
   const stateOptions = useMemo(() => [allStatesOption, ...indianStates], []);
+  const getLocalizedStateOptionLabel = (stateCode) => (
+    stateCode === allStatesOption.code
+      ? allStatesOption[languageCode] || allStatesOption.en
+      : getStateName(stateCode, languageCode)
+  );
   const hasActiveStateFilter = activeStateCode !== allStatesOption.code;
   const selectedStateLabel = useMemo(
-    () => getStateName(activeStateCode, languageCode),
+    () => getLocalizedStateOptionLabel(activeStateCode),
     [activeStateCode, languageCode],
   );
 
@@ -111,22 +116,22 @@ export default function DomainPage() {
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3 xl:max-w-5xl">
-          <div className="rounded-xl bg-white dark:bg-gray-900 p-4" style={{ border: '1px solid #d1d5db', borderRadius: '12px', background: '#ffffff' }}>
-            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Catalogs')}</div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/90">
+            <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('Catalogs')}</div>
             <div className="text-3xl font-black text-gray-900 dark:text-white">
               {catalogLoading ? '...' : stats.catalogs.toLocaleString()}
             </div>
           </div>
 
-          <div className="rounded-xl bg-white dark:bg-gray-900 p-4" style={{ border: '1px solid #d1d5db', borderRadius: '12px', background: '#ffffff' }}>
-            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Datasets')}</div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/90">
+            <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('Datasets')}</div>
             <div className="text-3xl font-black text-gray-900 dark:text-white">
               {catalogLoading ? '...' : stats.datasets.toLocaleString()}
             </div>
           </div>
 
-          <div className="rounded-2xl border-2 border-black p-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Quick Filters')}</div>
+          <div className="rounded-2xl border-2 border-black bg-white p-4 dark:bg-gray-900/80">
+            <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('Quick Filters')}</div>
             <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{t('State')}</div>
 
             <div className="relative mt-3">
@@ -140,7 +145,7 @@ export default function DomainPage() {
               >
                 {stateOptions.map((state) => (
                   <option key={state.code} value={state.code}>
-                    {getStateName(state.code, languageCode)}
+                    {getLocalizedStateOptionLabel(state.code)}
                   </option>
                 ))}
               </select>

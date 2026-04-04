@@ -1,0 +1,20 @@
+Backend:
+
+- FastAPI → Modern Python web framework for building APIs with automatic docs (OpenAPI/Swagger)
+- Uvicorn → ASGI server for running FastAPI apps
+- Pydantic → Data validation/parsing using type annotations, settings management
+- python-dotenv → Loads environment variables from .env file
+- databases + asyncpg → Async database toolkit with PostgreSQL support (though SQLite used)
+- python-jose + firebase-admin → JWT handling and Firebase authentication/integration
+- APScheduler → Background job scheduling (e.g. summary refresh)
+- httpx/requests → HTTP client for data.gov.in API calls
+- pandas/numpy → Data manipulation/analysis for dataset insights
+- matplotlib/seaborn → Plotting (not directly used in API, for testing?)
+- scikit-learn/spacy → ML/NLP for potential dataset analysis/explainer
+- OpenAI → Chatbot integration
+- ckanapi/datagovindia → CKAN API client for India government data portals
+- python-multipart/aiofiles → File uploads/streaming support
+
+Deployment:
+- Docker → Containerization (Dockerfile present)
+

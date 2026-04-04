@@ -1,0 +1,56 @@
+backend/
+├── analyze_datasets.py
+├── call_api.py
+├── cols.txt
+├── create_table.py
+├── Dockerfile
+├── fetch_multidomain_datasets.py
+├── generate_datasets_json.py
+├── generate_datasets.py
+├── generate_full_datasets_json.py
+├── generate_real_datasets.py
+├── inspect_datasets.py
+├── requirements.txt
+├── resrc_extract.py
+├── sync_summaries.py
+├── test_list_datasets.py
+├── test_visualization_engine.py
+├── working.py
+├── app/
+│   ├── config.py
+│   ├── dependencies.py
+│   ├── main.py
+│   ├── schemas.py
+│   └── routers/
+│       ├── auth.py
+│       ├── chatbot.py
+│       ├── dataset_explainer.py
+│       ├── datasets.py
+│       └── domains.py
+│   └── services/
+│       ├── chatbot_service.py
+│       ├── data_service.py
+│       ├── dataset_catalog.py
+│       ├── dataset_explainer.py
+│       ├── dataset_visualizer.py
+│       ├── firebase_identity.py
+│       ├── json_user_store.py
+│       ├── resource_discovery.py
+│       └── user_store.py
+├── data/
+│   # Data storage: JSON catalogs, SQLite DB, trackers, caches (ignores binaries/temps)
+│   ├── dataset_trackers.json
+│   ├── datasets.json
+│   ├── manual_probe.txt
+│   ├── resource_metadata_cache.json
+│   ├── summary_sync_state.json
+│   └── user_store.json
+└── summary/
+    # Pre-generated CSV summaries per sector (ignores temps)
+    ├── agriculture.csv
+    ├── census.csv
+    ├── education.csv
+    ├── finance.csv
+    ├── health.csv
+    └── transport.csv
+
