@@ -15,13 +15,17 @@ from typing import Any, Iterator
 
 import requests
 
-API_KEY = os.getenv("DATA_GOV_API_KEY", "579b464db66ec23bdd000001512ff0ae469e4783667632663591c20e")
+API_KEY = (
+    os.getenv("DATA_GOV_API_KEY")
+    or os.getenv("VITE_DATAGOVTAPI")
+    or "579b464db66ec23bdd000001512ff0ae469e4783667632663591c20e"
+)
 API_BASE_URL = "https://api.data.gov.in"
 LISTS_API_URL = f"{API_BASE_URL}/lists"
 CATALOG_PAGE_SIZE = 9
 DETAIL_PAGE_SIZE = 500
 MAX_VISUALIZATION_ROWS = 10000
-MAX_DYNAMIC_VISUALIZATION_ROWS = 500
+MAX_DYNAMIC_VISUALIZATION_ROWS = 50
 SUMMARY_REFRESH_INTERVAL_SECONDS = 60 * 60 * 6
 RESOURCE_METADATA_TTL_SECONDS = 60 * 60 * 24 * 7
 VISUALIZATION_CACHE_TTL_SECONDS = 60 * 60  # Cache visualization for 1 hour
@@ -582,6 +586,24 @@ def format_metric_value(value: float | int | None) -> str:
     return f"{numeric:,.2f}".rstrip("0").rstrip(".")
 
 
+def too_large_visualization_payload(total_rows: int | None) -> dict[str, Any]:
+    total = safe_int(total_rows, 0)
+    return {
+        "message": "Data is too large to visualize immediately.",
+        "charts": [],
+        "rowCount": total,
+        "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+    }
+
+
+def adaptive_category_bucket_limit(record_count: int) -> int:
+    if record_count <= 0:
+        return MAX_CATEGORY_BUCKETS
+    if record_count <= MAX_CATEGORY_BUCKETS:
+        return record_count
+    return min(max(MAX_CATEGORY_BUCKETS, math.ceil(record_count * 0.35)), 16)
+
+
 def percentile(values: list[float], ratio: float) -> float | None:
     if not values:
         return None
@@ -675,7 +697,8 @@ def detect_numeric_columns(records: list[dict[str, Any]], columns: list[str]) ->
 
 def detect_categorical_columns(records: list[dict[str, Any]], columns: list[str], numeric: list[str]) -> list[str]:
     sample = records[:COLUMN_DETECTION_SAMPLE_SIZE]
-    candidates: list[tuple[int, float, int, str]] = []
+    preferred: list[tuple[int, float, int, str]] = []
+    fallback: list[tuple[int, float, int, str]] = []
 
     for column in columns:
         if column in numeric:
@@ -691,17 +714,15 @@ def detect_categorical_columns(records: list[dict[str, Any]], columns: list[str]
             continue
 
         unique_ratio = unique_count / len(values)
-        if unique_count > max(MAX_CATEGORY_BUCKETS * 4, 20) or unique_ratio > 0.35:
-            continue
+        candidate = (1 if is_identifier_column(column) else 0, abs(unique_ratio - 0.25), unique_count, column)
+        if unique_count <= max(MAX_CATEGORY_BUCKETS * 4, 20) or unique_ratio <= 0.65:
+            preferred.append(candidate)
+        else:
+            fallback.append(candidate)
 
-        candidates.append((1 if is_identifier_column(column) else 0, unique_ratio, unique_count, column))
-        
-        # Early exit: if we found 1 good categorical column, we can stop
-        if len(candidates) >= 1:
-            break
-
-    candidates.sort(key=lambda item: (item[0], item[1], item[2], item[3].lower()))
-    return [column for _, _, _, column in candidates]
+    ranked_candidates = preferred or fallback
+    ranked_candidates.sort(key=lambda item: (item[0], item[1], item[2], item[3].lower()))
+    return [column for _, _, _, column in ranked_candidates]
 
 
 def aggregate_category_values(
@@ -729,11 +750,12 @@ def build_bar_chart(records: list[dict[str, Any]], category_column: str, numeric
     if not ranked_values:
         return None
 
+    bucket_limit = adaptive_category_bucket_limit(len(records))
     grouped_categories: list[dict[str, Any]] = []
-    if len(ranked_values) > MAX_CATEGORY_BUCKETS:
-        grouped_categories = ranked_values[MAX_CATEGORY_BUCKETS - 1 :]
+    if bucket_limit > 1 and len(ranked_values) > bucket_limit:
+        grouped_categories = ranked_values[bucket_limit - 1 :]
         others_value = sum(item["value"] for item in grouped_categories)
-        ranked_values = ranked_values[: MAX_CATEGORY_BUCKETS - 1]
+        ranked_values = ranked_values[: bucket_limit - 1]
         ranked_values.append({"label": "Others", "value": others_value})
 
     labels = [str(item["label"]) for item in ranked_values]
@@ -752,7 +774,7 @@ def build_bar_chart(records: list[dict[str, Any]], category_column: str, numeric
 
     return {
         "type": "bar",
-        "title": f"{numeric_column} by {category_column}",
+        "title": f"{numeric_column} vs {category_column}",
         "xKey": "displayLabel",
         "yKey": "value",
         "xLabel": category_column,
@@ -776,7 +798,7 @@ def build_histogram_chart(values: list[float], numeric_column: str) -> dict[str,
     if math.isclose(minimum, maximum):
         return {
             "type": "histogram",
-            "title": f"Distribution of {numeric_column}",
+            "title": f"Count vs {numeric_column}",
             "xKey": "displayLabel",
             "yKey": "count",
             "xLabel": numeric_column,
@@ -819,7 +841,7 @@ def build_histogram_chart(values: list[float], numeric_column: str) -> dict[str,
 
     return {
         "type": "histogram",
-        "title": f"Distribution of {numeric_column}",
+        "title": f"Count vs {numeric_column}",
         "xKey": "displayLabel",
         "yKey": "count",
         "xLabel": numeric_column,
@@ -836,6 +858,11 @@ def api_url(resource_id: str, *, limit: int = 500, offset: int = 0) -> str:
         f"{API_BASE_URL}/resource/{resource_id}"
         f"?api-key={API_KEY}&format=json&offset={offset}&limit={limit}"
     )
+
+
+def public_dataset_url(resource_id: str) -> str:
+    normalized_id = str(resource_id).replace(".csv", "")
+    return f"https://www.data.gov.in/resource/{normalized_id}"
 
 
 def request_json(url: str, *, retries: int = 3) -> dict[str, Any]:
@@ -1450,6 +1477,7 @@ def enrich_dataset(dataset: dict[str, Any], *, include_remote_metadata: bool = F
         "views": tracker["views"],
         "downloads": tracker["downloads"],
         "detailPath": f"/dataset/{dataset['id']}",
+        "sourceUrl": str(dataset.get("sourceUrl") or public_dataset_url(dataset["id"])),
     }
 
 
@@ -2000,6 +2028,12 @@ def dataset_link_payload(dataset: dict[str, Any]) -> dict[str, Any]:
         "sector": dataset["sectorKey"],
         "kind": "dataset",
         "href": f"/dataset/{dataset['id']}",
+        "description": str(dataset.get("description") or "").strip(),
+        "tags": normalize_tag_list(dataset.get("tags")),
+        "organization": str(dataset.get("organization") or "").strip(),
+        "publishedDate": dataset.get("publishedDate"),
+        "updatedDate": dataset.get("updatedDate"),
+        "sourceUrl": str(dataset.get("sourceUrl") or public_dataset_url(dataset["id"])),
     }
 
 
@@ -2042,12 +2076,7 @@ def infer_visualization(records: list[dict[str, Any]], columns: list[str], *, to
     total = total_rows or len(records)
 
     if total > MAX_DYNAMIC_VISUALIZATION_ROWS:
-        return {
-            "message": "Data is too large to create visualization",
-            "charts": [],
-            "rowCount": total,
-            "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
-        }
+        return too_large_visualization_payload(total)
 
     if not records or not resolved_columns:
         return {"message": "No visualization available for this dataset.", "charts": []}
@@ -2294,12 +2323,7 @@ def create_custom_visualization(
     
     # Check row count
     if total > MAX_DYNAMIC_VISUALIZATION_ROWS:
-        return {
-            "message": f"Data is too large to create visualization ({total} rows). Maximum is {MAX_DYNAMIC_VISUALIZATION_ROWS} rows.",
-            "charts": [],
-            "rowCount": total,
-            "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
-        }
+        return too_large_visualization_payload(total)
     
     # Validate column names exist
     if category_column not in columns:

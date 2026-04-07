@@ -38,6 +38,14 @@ export default function Landing() {
                 <span className="hidden sm:inline">Intelligent Data Hub</span>
               </h1>
             </div>
+            <button
+              onClick={() => handleOpenAuth('login')}
+              className="group inline-flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-primary to-secondary text-white font-black py-2.5 sm:py-3 px-4 sm:px-6 rounded-3xl text-sm sm:text-base shadow-2xl border border-white/20 cursor-pointer"
+            >
+              <User className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+              <span>Get Started</span>
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-2 transition-transform" />
+            </button>
           </div>
         </nav>
 
@@ -62,17 +70,6 @@ export default function Landing() {
             <p className="text-gray-700 dark:text-gray-300 font-medium mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed text-base sm:text-lg md:text-xl">
               Unlock 100+ datasets with AI insights, analytics, and intelligent search.
             </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <button
-                onClick={() => handleOpenAuth('login')}
-                className="group w-full sm:w-auto bg-gradient-to-r from-primary to-secondary text-white font-black py-3 sm:py-4 px-6 sm:px-8 rounded-3xl text-base sm:text-lg flex items-center justify-center gap-3 shadow-2xl border border-white/20 cursor-pointer"
-              >
-                <User className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                Get Started
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
-              </button>
-            </div>
           </motion.div>
         </section>
 

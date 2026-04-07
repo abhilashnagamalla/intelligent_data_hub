@@ -1,8 +1,9 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import api from '../../api';
-import { Send, Bot, Loader2, X, Plus, MessageSquare, Trash2, Menu, AlertTriangle, ArrowUpRight } from 'lucide-react';
+import { Send, Bot, Loader2, X, Plus, MessageSquare, Trash2, Menu, AlertTriangle, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+import api from '../../api';
 
 const DEFAULT_CHAT_TITLE = 'New Chat';
 
@@ -18,6 +19,7 @@ function hydrateChats(chats) {
     const derivedTitle = firstPrompt ? formatChatTitle(firstPrompt.content) : formatChatTitle(chat?.title);
     return {
       ...chat,
+      dataset: chat?.dataset || null,
       title: derivedTitle,
     };
   });
@@ -30,6 +32,7 @@ function StructuredResult({ result }) {
     <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/60">
       <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Analysis</div>
       <div className="mt-1 font-semibold text-gray-900 dark:text-white">{result.title}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-400">{result.dataset?.title}</div>
       {result.metrics?.length > 0 && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {result.metrics.map((metric) => (
@@ -40,25 +43,11 @@ function StructuredResult({ result }) {
           ))}
         </div>
       )}
-      {result.sections?.length > 0 && (
-        <div className="mt-4 space-y-4">
-          {result.sections.map((section) => (
-            <div key={section.title}>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">{section.title}</div>
-              <ul className="mt-2 space-y-2 list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
-                {section.items?.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
-export default function Chatbot({ onClose, sector: propSector }) {
+export default function ChatbotDataset({ onClose, sector: propSector }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { sector: urlSector } = useParams();
@@ -72,24 +61,54 @@ export default function Chatbot({ onClose, sector: propSector }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [datasetQuery, setDatasetQuery] = useState('');
+  const [datasetResults, setDatasetResults] = useState([]);
+  const [isSearchingDatasets, setIsSearchingDatasets] = useState(false);
+
+  const activeChat = useMemo(() => chats.find((chat) => chat.id === activeChatId) || null, [chats, activeChatId]);
+  const messages = activeChat?.messages || [];
+  const selectedDataset = activeChat?.dataset || null;
 
   useEffect(() => {
     localStorage.setItem('chatbot_sessions', JSON.stringify(chats));
   }, [chats]);
 
   useEffect(() => {
-    if (activeChatId) localStorage.setItem('chatbot_active_id', activeChatId);
+    if (activeChatId) {
+      localStorage.setItem('chatbot_active_id', activeChatId);
+    }
   }, [activeChatId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chats, activeChatId, isLoading]);
 
-  const activeChat = useMemo(() => chats.find((chat) => chat.id === activeChatId) || null, [chats, activeChatId]);
-  const messages = activeChat?.messages || [];
+  useEffect(() => {
+    setDatasetQuery(activeChat?.dataset?.title || '');
+    setDatasetResults([]);
+  }, [activeChatId, activeChat?.dataset?.id]);
+
+  const buildEmptyChat = (title = DEFAULT_CHAT_TITLE) => ({
+    id: Date.now().toString(),
+    title,
+    sector: currentSector,
+    dataset: null,
+    messages: [],
+  });
+
+  const ensureActiveChat = () => {
+    if (activeChatId) {
+      return activeChatId;
+    }
+
+    const newChat = buildEmptyChat();
+    setChats((current) => [newChat, ...current]);
+    setActiveChatId(newChat.id);
+    return newChat.id;
+  };
 
   const createNewChat = () => {
-    const newChat = { id: Date.now().toString(), title: DEFAULT_CHAT_TITLE, sector: currentSector, messages: [] };
+    const newChat = buildEmptyChat();
     setChats((current) => [newChat, ...current]);
     setActiveChatId(newChat.id);
   };
@@ -100,36 +119,111 @@ export default function Chatbot({ onClose, sector: propSector }) {
     if (activeChatId === id) setActiveChatId('');
   };
 
+  const updateChat = (chatId, updater) => {
+    setChats((current) => current.map((chat) => (chat.id === chatId ? updater(chat) : chat)));
+  };
+
   const appendMessage = (chatId, message) => {
-    setChats((current) => current.map((chat) => (chat.id === chatId ? { ...chat, messages: [...chat.messages, message] } : chat)));
+    updateChat(chatId, (chat) => ({ ...chat, messages: [...chat.messages, message] }));
   };
 
   const setChatTitle = (chatId, title) => {
-    setChats((current) =>
-      current.map((chat) => (
-        chat.id === chatId
-          ? { ...chat, title: formatChatTitle(title) }
-          : chat
-      )),
-    );
+    updateChat(chatId, (chat) => ({ ...chat, title: formatChatTitle(title) }));
+  };
+
+  const setChatDataset = (chatId, dataset) => {
+    updateChat(chatId, (chat) => ({ ...chat, dataset }));
+  };
+
+  useEffect(() => {
+    const query = datasetQuery.trim();
+    if (!activeChatId || !query) {
+      setDatasetResults([]);
+      setIsSearchingDatasets(false);
+      return undefined;
+    }
+
+    if (selectedDataset?.title === query) {
+      setDatasetResults([]);
+      setIsSearchingDatasets(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearchingDatasets(true);
+      try {
+        const response = await api.get('/datasets/search', {
+          params: {
+            q: query,
+            sector: currentSector !== 'all' ? currentSector : undefined,
+          },
+        });
+
+        if (!cancelled) {
+          setDatasetResults((response.data || []).slice(0, 8));
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setDatasetResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearchingDatasets(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [datasetQuery, activeChatId, currentSector, selectedDataset?.id, selectedDataset?.title]);
+
+  const handleDatasetQueryChange = (event) => {
+    ensureActiveChat();
+    setDatasetQuery(event.target.value);
+  };
+
+  const selectDataset = (dataset) => {
+    const chatId = ensureActiveChat();
+    const selected = {
+      id: dataset.id,
+      title: dataset.title,
+      sector: dataset.sectorKey || dataset.sector,
+    };
+    setChatDataset(chatId, selected);
+    setDatasetQuery(selected.title);
+    setDatasetResults([]);
   };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
     const trimmedInput = input.trim();
 
-    let chatId = activeChatId;
-    if (!chatId) {
-      const newChat = { id: Date.now().toString(), title: formatChatTitle(trimmedInput), sector: currentSector, messages: [] };
-      setChats((current) => [newChat, ...current]);
-      setActiveChatId(newChat.id);
-      chatId = newChat.id;
-    } else if (!activeChat?.messages?.length || activeChat?.title === DEFAULT_CHAT_TITLE) {
+    const chatId = ensureActiveChat();
+    const chat = chats.find((entry) => entry.id === chatId) || activeChat;
+    const dataset = chat?.dataset || selectedDataset;
+
+    if (!dataset?.id) {
+      appendMessage(chatId, {
+        role: 'bot',
+        content: 'Select a dataset before asking a question. This chatbot only answers dataset-specific questions.',
+        restricted: true,
+        matches: [],
+        insights: [],
+        result: null,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      return;
+    }
+
+    if (!chat?.messages?.length || chat?.title === DEFAULT_CHAT_TITLE) {
       setChatTitle(chatId, trimmedInput);
     }
 
-    const userMessage = { role: 'user', content: trimmedInput, timestamp: new Date().toLocaleTimeString() };
-    appendMessage(chatId, userMessage);
+    appendMessage(chatId, { role: 'user', content: trimmedInput, timestamp: new Date().toLocaleTimeString() });
     setInput('');
     setIsLoading(true);
 
@@ -138,9 +232,11 @@ export default function Chatbot({ onClose, sector: propSector }) {
         query: trimmedInput,
         session_id: chatId,
         sector: currentSector !== 'all' ? currentSector : null,
+        dataset_id: dataset.id,
+        dataset_title: dataset.title,
       });
 
-      const botMessage = {
+      appendMessage(chatId, {
         role: 'bot',
         content: response.data?.content || 'No response available.',
         restricted: !!response.data?.restricted,
@@ -148,8 +244,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
         insights: response.data?.insights || [],
         result: response.data?.result || null,
         timestamp: new Date().toLocaleTimeString(),
-      };
-      appendMessage(chatId, botMessage);
+      });
     } catch (error) {
       console.error(error);
       appendMessage(chatId, {
@@ -172,6 +267,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
       onClose?.();
       return;
     }
+
     navigate(match.href, { state: { id: match.id, title: match.title, sectorKey: match.sector, sector: match.sector } });
     onClose?.();
   };
@@ -189,9 +285,12 @@ export default function Chatbot({ onClose, sector: propSector }) {
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {chats.map((chat) => (
                 <div key={chat.id} onClick={() => setActiveChatId(chat.id)} className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer ${activeChatId === chat.id ? 'bg-gray-100 dark:bg-gray-900' : 'hover:bg-gray-50 dark:hover:bg-gray-900/70'}`}>
-                  <div className="flex items-center gap-3 truncate">
+                  <div className="flex items-center gap-3 min-w-0">
                     <MessageSquare className="w-4 h-4" />
-                    <span className="text-sm truncate">{chat.title || 'Untitled Chat'}</span>
+                    <div className="min-w-0">
+                      <div className="text-sm truncate">{chat.title || 'Untitled Chat'}</div>
+                      <div className="text-[10px] uppercase tracking-wide text-gray-400 truncate">{chat.dataset?.title || 'No dataset selected'}</div>
+                    </div>
                   </div>
                   <button onClick={(event) => deleteChat(chat.id, event)} className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950 transition-all"><Trash2 className="w-4 h-4" /></button>
                 </div>
@@ -208,19 +307,69 @@ export default function Chatbot({ onClose, sector: propSector }) {
             <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-900"><Bot className="w-5 h-5" /></div>
             <div>
               <div className="font-bold text-gray-900 dark:text-white">Dataset Chatbot</div>
-              <div className="text-xs text-gray-500">RAG-powered search and live insights for {sectorTitle} datasets</div>
+              <div className="text-xs text-gray-500">Restricted to {sectorTitle} datasets and dataset-derived insights</div>
             </div>
           </div>
           {onClose && <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900"><X className="w-5 h-5" /></button>}
         </header>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+            <div className="text-sm font-semibold text-gray-900 dark:text-white">Dataset Context</div>
+            <div className="mt-3 relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                value={datasetQuery}
+                onChange={handleDatasetQueryChange}
+                onFocus={() => ensureActiveChat()}
+                placeholder={`Search ${sectorTitle.toLowerCase()} datasets`}
+                className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+
+            {selectedDataset && (
+              <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/40">
+                <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Active dataset</div>
+                <div className="mt-1 font-semibold text-gray-900 dark:text-white">{selectedDataset.title}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{selectedDataset.sector || sectorTitle}</div>
+              </div>
+            )}
+
+            {isSearchingDatasets && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" /> Searching datasets...
+              </div>
+            )}
+
+            {!isSearchingDatasets && datasetResults.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {datasetResults.map((dataset) => (
+                  <button
+                    key={dataset.id}
+                    type="button"
+                    onClick={() => selectDataset(dataset)}
+                    className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-left hover:border-black dark:border-gray-800 dark:hover:border-white"
+                  >
+                    <div className="font-semibold text-gray-900 dark:text-white">{dataset.title}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{dataset.sectorKey || dataset.sector}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!selectedDataset && (
+              <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                Select a dataset to enable mean, min, max, count, column, and trend analysis.
+              </div>
+            )}
+          </div>
+
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-6 text-gray-500">
               <div className="w-20 h-20 rounded-3xl bg-black text-white flex items-center justify-center"><Bot className="w-10 h-10" /></div>
               <div>
                 <div className="text-3xl font-black text-gray-900 dark:text-white">Dataset Chatbot</div>
-                <div className="mt-2">Search datasets by topic, state, or sector, then ask for insights from the dataset you want to explore.</div>
+                <div className="mt-2">Select a dataset, then ask for mean, min, max, count, column details, or trend insights.</div>
               </div>
             </div>
           ) : (
@@ -229,54 +378,18 @@ export default function Chatbot({ onClose, sector: propSector }) {
                 <div className={`max-w-[85%] rounded-2xl p-4 ${message.role === 'user' ? 'bg-black text-white' : 'bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100'}`}>
                   {message.restricted && (
                     <div className="mb-3 flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/50 rounded-xl px-3 py-2 text-sm">
-                      <AlertTriangle className="w-4 h-4" /> Domain restriction active
+                      <AlertTriangle className="w-4 h-4" /> Dataset restriction active
                     </div>
                   )}
                   <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
                   <StructuredResult result={message.result} />
                   {message.matches?.length > 0 && (
-                    <div className="mt-4 space-y-3">
-                      {message.matches.map((match, matchIndex) => (
-                        <div key={`${match.id}-${matchIndex}`} className="rounded-xl border border-gray-200 px-4 py-4 dark:border-gray-800">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-400">
-                            {match.rank || matchIndex + 1}. {match.kind === 'sector' ? 'Sector result' : 'Dataset result'}
-                          </div>
-                          <div className="mt-1 font-semibold text-gray-900 dark:text-white">{match.title}</div>
-                          {match.description && (
-                            <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">{match.description}</div>
-                          )}
-                          {match.organization && (
-                            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{match.organization}</div>
-                          )}
-                          {match.tags?.length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {match.tags.slice(0, 6).map((tag) => (
-                                <span key={`${match.id}-${tag}`} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <button
-                              onClick={() => openDataset(match)}
-                              className="inline-flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                            >
-                              {match.kind === 'sector' ? 'Open sector' : 'Open dataset'}
-                            </button>
-                            {match.sourceUrl && (
-                              <a
-                                href={match.sourceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-black hover:text-black dark:border-gray-700 dark:text-gray-200 dark:hover:border-white dark:hover:text-white"
-                              >
-                                Source link
-                                <ArrowUpRight className="h-3.5 w-3.5" />
-                              </a>
-                            )}
-                          </div>
-                        </div>
+                    <div className="mt-4 space-y-2">
+                      {message.matches.map((match) => (
+                        <button key={match.id} onClick={() => openDataset(match)} className="w-full text-left rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 hover:border-black dark:hover:border-white transition-colors">
+                          <div className="font-semibold">{match.title}</div>
+                          <div className="text-xs text-gray-500">{match.kind === 'sector' ? 'Open sector page' : 'Open dataset details'}</div>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -292,6 +405,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
               </motion.div>
             ))
           )}
+
           {isLoading && (
             <div className="flex items-center gap-3 text-gray-500"><Loader2 className="w-5 h-5 animate-spin" /> Generating response...</div>
           )}
@@ -309,11 +423,11 @@ export default function Chatbot({ onClose, sector: propSector }) {
                   sendMessage();
                 }
               }}
-              placeholder="Search datasets or ask for insights from a specific dataset"
+              placeholder={selectedDataset ? 'Ask about the selected dataset' : 'Select a dataset to begin'}
               rows={2}
               className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 pl-4 pr-16 py-4 resize-none"
             />
-            <button onClick={sendMessage} disabled={isLoading || !input.trim()} className="absolute right-3 bottom-3 p-3 rounded-xl bg-black text-white disabled:opacity-50">
+            <button onClick={sendMessage} disabled={isLoading || !input.trim() || !selectedDataset} className="absolute right-3 bottom-3 p-3 rounded-xl bg-black text-white disabled:opacity-50">
               <Send className="w-5 h-5" />
             </button>
           </div>
@@ -322,4 +436,3 @@ export default function Chatbot({ onClose, sector: propSector }) {
     </div>
   );
 }
-

@@ -44,7 +44,16 @@ export default function DatasetVisualizerDynamic({ visualization, insights = [] 
   }
 
   if (visualization.message) {
-    return <div className="rounded-2xl border border-gray-200 p-8 text-gray-700 dark:border-gray-800 dark:text-gray-300">{visualization.message}</div>;
+    return (
+      <div className="rounded-2xl border border-gray-200 p-8 text-gray-700 dark:border-gray-800 dark:text-gray-300">
+        <div>{visualization.message}</div>
+        {visualization.rowCount && visualization.threshold && (
+          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Dataset has {visualization.rowCount.toLocaleString()} rows. Visualization limit is {visualization.threshold.toLocaleString()} rows.
+          </div>
+        )}
+      </div>
+    );
   }
 
   const chart = visualization.charts?.[0];
@@ -59,7 +68,7 @@ export default function DatasetVisualizerDynamic({ visualization, insights = [] 
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">{chart.title}</h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Automatically selected from detected categorical and numerical columns.
+          Showing {chart.yLabel} vs {chart.xLabel}, selected from the dataset&apos;s own columns.
         </p>
       </div>
 

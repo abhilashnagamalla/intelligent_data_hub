@@ -13,6 +13,19 @@ import GeoViewModal from "../../components/dataset/GeoViewModalMap";
 import { Map, Loader2 } from "lucide-react";
 
 const PAGE_SIZE = 250;
+const VISUALIZATION_ROW_LIMIT = 50;
+
+function largeDatasetVisualization(totalRows) {
+  return {
+    visualization: {
+      message: "Data is too large to visualize immediately.",
+      charts: [],
+      rowCount: Number(totalRows || 0),
+      threshold: VISUALIZATION_ROW_LIMIT,
+    },
+    insights: [],
+  };
+}
 
 function csvPreview(records, columns) {
   if (!records.length || !columns.length) return "";
@@ -111,7 +124,15 @@ export default function DatasetDetailPage() {
   }, [dataset, page]);
 
   useEffect(() => {
-    if (!dataset || !sector || activeView !== "viz") return undefined;
+    if (!dataset || activeView !== "viz") return undefined;
+
+    const totalRows = Number(stats?.rows || dataset.numberOfRows || dataset.rows || 0);
+    if (totalRows > VISUALIZATION_ROW_LIMIT) {
+      setVisualization({ loading: false, data: largeDatasetVisualization(totalRows) });
+      return undefined;
+    }
+
+    if (!sector) return undefined;
 
     let cancelled = false;
     setVisualization({ loading: true, data: null });
@@ -131,7 +152,7 @@ export default function DatasetDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeView, dataset, sector]);
+  }, [activeView, dataset, sector, stats?.rows]);
 
   useEffect(() => {
     const handleEvent = (event) => {

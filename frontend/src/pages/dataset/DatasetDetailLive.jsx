@@ -9,6 +9,19 @@ import DatasetVisualizer from '../../components/dataset/DatasetVisualizerDynamic
 import useEngagement from '../../hooks/useEngagement';
 
 const PAGE_SIZE = 500;
+const VISUALIZATION_ROW_LIMIT = 50;
+
+function largeDatasetVisualization(totalRows) {
+  return {
+    visualization: {
+      message: 'Data is too large to visualize immediately.',
+      charts: [],
+      rowCount: Number(totalRows || 0),
+      threshold: VISUALIZATION_ROW_LIMIT,
+    },
+    insights: [],
+  };
+}
 
 function apiErrorMessage(error, fallback) {
   if (error?.response?.status === 429) {
@@ -239,7 +252,15 @@ export default function DatasetDetailLive() {
   }, [dataset?.id]);
 
   useEffect(() => {
-    if (!dataset || !sector || activeView !== 'viz' || vizState.data || vizState.loading) return;
+    if (!dataset || activeView !== 'viz') return;
+
+    const totalRows = Number(stats?.rows || dataset.numberOfRows || dataset.rows || 0);
+    if (totalRows > VISUALIZATION_ROW_LIMIT) {
+      setVizState({ loading: false, data: largeDatasetVisualization(totalRows), error: '' });
+      return;
+    }
+
+    if (!sector || vizState.data || vizState.loading) return;
 
     let cancelled = false;
     async function loadVisualization() {
@@ -257,7 +278,7 @@ export default function DatasetDetailLive() {
     return () => {
       cancelled = true;
     };
-  }, [dataset, sector, activeView, vizState.data, vizState.loading]);
+  }, [dataset, sector, activeView, stats?.rows, vizState.data, vizState.loading]);
 
   const csvPreview = useMemo(() => formatCsv(pageData.records, pageData.columns), [pageData]);
   const rawPreviewText = csvPreview || 'No data available.';
