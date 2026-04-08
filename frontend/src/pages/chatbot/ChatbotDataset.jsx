@@ -25,6 +25,56 @@ function hydrateChats(chats) {
   });
 }
 
+function readStoredChats() {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const rawChats = window.localStorage.getItem('chatbot_sessions');
+    return hydrateChats(JSON.parse(rawChats || '[]'));
+  } catch (_error) {
+    try {
+      window.localStorage.removeItem('chatbot_sessions');
+    } catch (_storageError) {
+      // Ignore storage cleanup errors and fall back to an empty session list.
+    }
+    return [];
+  }
+}
+
+function readStoredActiveChatId() {
+  if (typeof window === 'undefined') return '';
+
+  try {
+    return window.localStorage.getItem('chatbot_active_id') || '';
+  } catch (_error) {
+    return '';
+  }
+}
+
+function persistChats(chats) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem('chatbot_sessions', JSON.stringify(chats));
+  } catch (_error) {
+    // Ignore storage quota/private mode errors and keep the UI responsive.
+  }
+}
+
+function persistActiveChatId(activeChatId) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (activeChatId) {
+      window.localStorage.setItem('chatbot_active_id', activeChatId);
+    } else {
+      window.localStorage.removeItem('chatbot_active_id');
+    }
+  } catch (_error) {
+    // Ignore storage quota/private mode errors and keep the UI responsive.
+  }
+}
+
 function StructuredResult({ result }) {
   if (!result) return null;
 
@@ -56,8 +106,8 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
   const currentSector = propSector || urlSector || (location.pathname.match(/\/domain\/([^/]+)/)?.[1] ?? 'all');
   const sectorTitle = currentSector === 'all' ? 'General' : currentSector.charAt(0).toUpperCase() + currentSector.slice(1);
 
-  const [chats, setChats] = useState(() => hydrateChats(JSON.parse(localStorage.getItem('chatbot_sessions') || '[]')));
-  const [activeChatId, setActiveChatId] = useState(() => localStorage.getItem('chatbot_active_id') || '');
+  const [chats, setChats] = useState(() => readStoredChats());
+  const [activeChatId, setActiveChatId] = useState(() => readStoredActiveChatId());
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -70,13 +120,11 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
   const selectedDataset = activeChat?.dataset || null;
 
   useEffect(() => {
-    localStorage.setItem('chatbot_sessions', JSON.stringify(chats));
+    persistChats(chats);
   }, [chats]);
 
   useEffect(() => {
-    if (activeChatId) {
-      localStorage.setItem('chatbot_active_id', activeChatId);
-    }
+    persistActiveChatId(activeChatId);
   }, [activeChatId]);
 
   useEffect(() => {
@@ -163,8 +211,7 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
         if (!cancelled) {
           setDatasetResults((response.data || []).slice(0, 8));
         }
-      } catch (error) {
-        console.error(error);
+      } catch (_error) {
         if (!cancelled) {
           setDatasetResults([]);
         }
@@ -245,8 +292,7 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
         result: response.data?.result || null,
         timestamp: new Date().toLocaleTimeString(),
       });
-    } catch (error) {
-      console.error(error);
+    } catch (_error) {
       appendMessage(chatId, {
         role: 'bot',
         content: 'Sorry, something went wrong. Please try again.',
@@ -262,13 +308,19 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
   };
 
   const openDataset = (match) => {
+    const targetHref = match?.href
+      || (match?.kind === 'sector' && match?.sector ? `/domain/${match.sector}` : null)
+      || (match?.id ? `/dataset/${match.id}` : null);
+
+    if (!targetHref) return;
+
     if (match.kind === 'sector') {
-      navigate(match.href);
+      navigate(targetHref);
       onClose?.();
       return;
     }
 
-    navigate(match.href, { state: { id: match.id, title: match.title, sectorKey: match.sector, sector: match.sector } });
+    navigate(targetHref, { state: { id: match.id, title: match.title, sectorKey: match.sector, sector: match.sector } });
     onClose?.();
   };
 

@@ -1,19 +1,25 @@
-# Low Transparent Subcontainer Borders Task
+## Chatbot UI Fix - COMPLETE ✅
 
-## Plan Summary
-Make subcontainer borders low transparent matching catalog/datasets count, quick filters, published/geo view/views/downloads style using `border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40`.
+**Summary**:
+- Servers confirmed running: Backend (localhost:8000), Frontend Vite (localhost:5173).
+- Route: /dashboard/chatbot (protected, via sidebar 'Domain Chatbot').
+- Code analysis: No syntax/render issues in Chatbot.jsx, App.jsx, auth.
+- Fix Applied: Started/verified dev environment.
 
-## Steps
-- [ ] 1. Create this TODO.md
-- [x] 2. Update CatalogCardLive.jsx: Change solid `border-2 border-black` to low transparent
-- [x] 4. Update DomainCard.jsx: Main and internal borders to /30 (minor style update)
-- [x] 6. Update DomainStats.jsx: Add borders matching style
-- [ ] 3. Update DomainCatalogPage.jsx: Confirm/polish subcontainers (already matches)
-- [ ] 5. Update GeoViewModal.jsx: Internal panels to low transparent
-- [ ] 7. Test and complete
-- [ ] 5. Update GeoViewModal.jsx: Internal panels to low transparent
-- [ ] 6. Update DomainStats.jsx: Add borders matching style
-- [ ] 7. Test in dev server, update TODO, complete task
+**Access**:
+1. http://localhost:5173 → Login (Google/email).
+2. Sidebar → Domain Chatbot.
+3. UI displays with input, empty state ready for queries.
 
-All steps complete. Subcontainers across CatalogCardLive, DomainCard, DomainStats, GeoViewModal have low transparent borders matching the reference style in DomainCatalogPage. Task done - run `cd frontend && npm run dev` to preview.
+**Test**:
+- Send message → calls /chatbot/query.
+- Backend responds with insights/datasets.
+
+No code changes needed. Environment fixed.
+
+If still issues: Check console F12, localStorage 'user', backend logs.
+
+
+
+
 

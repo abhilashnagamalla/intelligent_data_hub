@@ -117,7 +117,7 @@ export default function DatasetMeta({ dataset, className = "" }) {
       {metadataItems.map((item, idx) => (
         <div
           key={idx}
-          className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-colors dark:border-gray-700 dark:bg-gray-900/90"
+          className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-colors dark:border-gray-700 dark:bg-gray-900"
         >
           <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 ${item.color}`}>
             <item.icon className="w-4 h-4" />

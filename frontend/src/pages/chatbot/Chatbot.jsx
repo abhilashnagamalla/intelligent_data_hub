@@ -23,31 +23,105 @@ function hydrateChats(chats) {
   });
 }
 
-function StructuredResult({ result }) {
-  if (!result) return null;
+function readStoredChats() {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const rawChats = window.localStorage.getItem('chatbot_sessions');
+    return hydrateChats(JSON.parse(rawChats || '[]'));
+  } catch (_error) {
+    try {
+      window.localStorage.removeItem('chatbot_sessions');
+    } catch (_storageError) {
+      // Ignore storage cleanup errors and fall back to an empty session list.
+    }
+    return [];
+  }
+}
+
+function readStoredActiveChatId() {
+  if (typeof window === 'undefined') return '';
+
+  try {
+    return window.localStorage.getItem('chatbot_active_id') || '';
+  } catch (_error) {
+    return '';
+  }
+}
+
+function persistChats(chats) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem('chatbot_sessions', JSON.stringify(chats));
+  } catch (_error) {
+    // Ignore storage quota/private mode errors and keep the UI responsive.
+  }
+}
+
+function persistActiveChatId(activeChatId) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (activeChatId) {
+      window.localStorage.setItem('chatbot_active_id', activeChatId);
+    } else {
+      window.localStorage.removeItem('chatbot_active_id');
+    }
+  } catch (_error) {
+    // Ignore storage quota/private mode errors and keep the UI responsive.
+  }
+}
+
+function ChartViz({ chart }) {
+  if (!chart) return null;
+
+  const chartType = String(chart.type || 'chart');
+  return (
+    <div className="mt-6">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{chartType.toUpperCase()} Chart</div>
+      <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 h-64 flex items-center justify-center">
+        <div className="text-sm text-gray-500 text-center">
+          Chart data ready: {chart.x_axis?.length || 0} x {chart.y_axis?.length || 0} points<br/>
+          Type: {chartType} | Sample: {chart.y_axis?.slice(0, 3).join(', ')}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StructuredResult({ message, result }) {
+  const resolvedMessage = message || (result ? { result } : null);
+  const resolvedResult = resolvedMessage?.result || result || null;
+  const type = resolvedMessage?.type || resolvedResult?.intent || 'insight';
+
+  if (!resolvedResult && !resolvedMessage?.chart) return null;
 
   return (
     <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/60">
-      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Analysis</div>
-      <div className="mt-1 font-semibold text-gray-900 dark:text-white">{result.title}</div>
-      {result.metrics?.length > 0 && (
+      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {type.toUpperCase()} {resolvedResult?.title ? `- ${resolvedResult.title}` : ''}
+      </div>
+      {resolvedMessage?.chart && <ChartViz chart={resolvedMessage.chart} />}
+      {resolvedResult?.title && <div className="mt-1 font-semibold text-gray-900 dark:text-white">{resolvedResult.title}</div>}
+      {resolvedResult?.metrics?.length > 0 && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {result.metrics.map((metric) => (
-            <div key={`${metric.label}-${metric.value}`} className="rounded-xl border border-gray-200 bg-white px-3 py-3 dark:border-gray-700 dark:bg-gray-950">
+          {resolvedResult.metrics.map((metric, i) => (
+            <div key={i} className="rounded-xl border border-gray-200 bg-white px-3 py-3 dark:border-gray-700 dark:bg-gray-950">
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">{metric.label}</div>
               <div className="mt-1 font-semibold text-gray-900 dark:text-white">{metric.value}</div>
             </div>
           ))}
         </div>
       )}
-      {result.sections?.length > 0 && (
+      {resolvedResult?.sections?.length > 0 && (
         <div className="mt-4 space-y-4">
-          {result.sections.map((section) => (
-            <div key={section.title}>
+          {resolvedResult.sections.map((section, i) => (
+            <div key={i}>
               <div className="text-sm font-semibold text-gray-900 dark:text-white">{section.title}</div>
               <ul className="mt-2 space-y-2 list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
-                {section.items?.map((item) => (
-                  <li key={item}>{item}</li>
+                {section.items?.map((item, j) => (
+                  <li key={j}>{item}</li>
                 ))}
               </ul>
             </div>
@@ -67,18 +141,18 @@ export default function Chatbot({ onClose, sector: propSector }) {
   const currentSector = propSector || urlSector || (location.pathname.match(/\/domain\/([^/]+)/)?.[1] ?? 'all');
   const sectorTitle = currentSector === 'all' ? 'General' : currentSector.charAt(0).toUpperCase() + currentSector.slice(1);
 
-  const [chats, setChats] = useState(() => hydrateChats(JSON.parse(localStorage.getItem('chatbot_sessions') || '[]')));
-  const [activeChatId, setActiveChatId] = useState(() => localStorage.getItem('chatbot_active_id') || '');
+  const [chats, setChats] = useState(() => readStoredChats());
+  const [activeChatId, setActiveChatId] = useState(() => readStoredActiveChatId());
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('chatbot_sessions', JSON.stringify(chats));
+    persistChats(chats);
   }, [chats]);
 
   useEffect(() => {
-    if (activeChatId) localStorage.setItem('chatbot_active_id', activeChatId);
+    persistActiveChatId(activeChatId);
   }, [activeChatId]);
 
   useEffect(() => {
@@ -140,18 +214,20 @@ export default function Chatbot({ onClose, sector: propSector }) {
         sector: currentSector !== 'all' ? currentSector : null,
       });
 
+      const responseData = response.data;
       const botMessage = {
         role: 'bot',
-        content: response.data?.content || 'No response available.',
-        restricted: !!response.data?.restricted,
-        matches: response.data?.matches || [],
-        insights: response.data?.insights || [],
-        result: response.data?.result || null,
+        content: responseData.content || responseData.type || 'No response available.',
+        restricted: !!responseData?.restricted,
+        matches: responseData.matches || responseData.datasets || [],
+        insights: responseData.insights || [],
+        result: responseData.result || responseData,
+        chart: responseData.chart || null,
+        type: responseData.type || null,
         timestamp: new Date().toLocaleTimeString(),
       };
       appendMessage(chatId, botMessage);
     } catch (error) {
-      console.error(error);
       appendMessage(chatId, {
         role: 'bot',
         content: 'Sorry, something went wrong. Please try again.',
@@ -167,12 +243,18 @@ export default function Chatbot({ onClose, sector: propSector }) {
   };
 
   const openDataset = (match) => {
+    const targetHref = match?.href
+      || (match?.kind === 'sector' && match?.sector ? `/domain/${match.sector}` : null)
+      || (match?.id ? `/dataset/${match.id}` : null);
+
+    if (!targetHref) return;
+
     if (match.kind === 'sector') {
-      navigate(match.href);
+      navigate(targetHref);
       onClose?.();
       return;
     }
-    navigate(match.href, { state: { id: match.id, title: match.title, sectorKey: match.sector, sector: match.sector } });
+    navigate(targetHref, { state: { id: match.id, title: match.title, sectorKey: match.sector, sector: match.sector } });
     onClose?.();
   };
 
@@ -233,7 +315,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
                     </div>
                   )}
                   <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
-                  <StructuredResult result={message.result} />
+                  <StructuredResult message={message} />
                   {message.matches?.length > 0 && (
                     <div className="mt-4 space-y-3">
                       {message.matches.map((match, matchIndex) => (
@@ -322,4 +404,3 @@ export default function Chatbot({ onClose, sector: propSector }) {
     </div>
   );
 }
-

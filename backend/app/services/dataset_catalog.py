@@ -15,8 +15,11 @@ from typing import Any, Iterator
 
 import requests
 
+from app.config import settings
+
 API_KEY = (
-    os.getenv("DATA_GOV_API_KEY")
+    settings.DATA_GOV_API_KEY
+    or os.getenv("DATA_GOV_API_KEY")
     or os.getenv("VITE_DATAGOVTAPI")
     or "579b464db66ec23bdd000001512ff0ae469e4783667632663591c20e"
 )
@@ -1999,6 +2002,32 @@ def start_summary_refresh(force: bool = False) -> None:
         _summary_thread = threading.Thread(target=refresh_summary_files, kwargs={"force": force}, daemon=True)
         _summary_thread.start()
 
+
+def search_resource_metadata(query: str, limit: int = 10) -> list[dict]:
+    """
+    Search data.gov.in catalog for RESOURCE_ID matching query.
+    Returns closest matching datasets with RESOURCE_ID.
+    """
+    params = {
+        "api-key": API_KEY,
+        "q": query,
+        "limit": limit,
+    }
+    try:
+        payload = request_json_params("https://api.data.gov.in/catalog", params)
+        records = payload.get("results", [])
+        return [
+            {
+                "resource_id": str(record.get("resource_id") or ""),
+                "title": str(record.get("title") or ""),
+                "description": str(record.get("desc") or ""),
+                "sector": str(record.get("sector") or ""),
+                "organization": str(record.get("organization") or ""),
+            }
+            for record in records if isinstance(record, dict) and record.get("resource_id")
+        ][:limit]
+    except requests.RequestException:
+        return []
 
 def domain_stats() -> list[dict[str, Any]]:
     stats: list[dict[str, Any]] = []

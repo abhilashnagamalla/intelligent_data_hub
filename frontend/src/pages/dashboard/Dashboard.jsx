@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import BackgroundFrame from '../../components/common/BackgroundFrame';
 import DomainCard from '../../components/domain/DomainCard';
+import { overviewPageBackground } from '../../constants/backgrounds';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -36,31 +38,47 @@ export default function Dashboard() {
     catalogs: domains.reduce((sum, domain) => sum + (domain.catalogs || 0), 0),
   }), [domains]);
 
-  if (loading) return <div className="text-gray-500">{t('Loading dashboard...')}</div>;
+  if (loading) {
+    return (
+      <BackgroundFrame
+        imageSrc={overviewPageBackground}
+        className="min-h-[calc(100vh-9rem)]"
+        contentClassName="flex min-h-[calc(100vh-9rem)] items-center justify-center"
+      >
+        <div className="text-gray-600 dark:text-gray-300">{t('Loading dashboard...')}</div>
+      </BackgroundFrame>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-black bg-white dark:bg-gray-950 p-8">
-        <div className="grid grid-cols-2 gap-6 text-center">
-          <div>
-            <div className="text-4xl font-black text-gray-900 dark:text-white">{domains.length}</div>
-            <div className="text-sm text-gray-500 uppercase tracking-wide mt-1">{t('Domains')}</div>
+    <BackgroundFrame
+      imageSrc={overviewPageBackground}
+      className="min-h-[calc(100vh-9rem)]"
+      contentClassName="space-y-8 p-4 sm:p-6 lg:p-8"
+    >
+      <div className="space-y-8">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-black bg-white/92 p-8 dark:bg-gray-950/92">
+          <div className="grid grid-cols-2 gap-6 text-center">
+            <div>
+              <div className="text-4xl font-black text-gray-900 dark:text-white">{domains.length}</div>
+              <div className="mt-1 text-sm uppercase tracking-wide text-gray-500">{t('Domains')}</div>
+            </div>
+            <div>
+              <div className="text-4xl font-black text-gray-900 dark:text-white">{totals.catalogs}</div>
+              <div className="mt-1 text-sm uppercase tracking-wide text-gray-500">{t('Catalog Pages')}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-4xl font-black text-gray-900 dark:text-white">{totals.catalogs}</div>
-            <div className="text-sm text-gray-500 uppercase tracking-wide mt-1">{t('Catalog Pages')}</div>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      <section className="space-y-4">
-        <h2 className="text-3xl font-black text-gray-900 dark:text-white">{t('Explore Domains')}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {domains.map((domain) => (
-            <DomainCard key={domain.sector} domain={domain} onClick={() => navigate(`/domain/${domain.sector}`)} />
-          ))}
-        </div>
-      </section>
-    </div>
+        <section className="space-y-4">
+          <h2 className="text-3xl font-black text-gray-900 dark:text-white">{t('Explore Domains')}</h2>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {domains.map((domain) => (
+              <DomainCard key={domain.sector} domain={domain} onClick={() => navigate(`/domain/${domain.sector}`)} />
+            ))}
+          </div>
+        </section>
+      </div>
+    </BackgroundFrame>
   );
 }

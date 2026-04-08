@@ -36,7 +36,7 @@ from .dataset_catalog import (
     unique_query_terms,
 )
 
-TOP_K_RESULTS = 5
+TOP_K_RESULTS = 10
 DEFAULT_LISTING_LIMIT = 10
 BROAD_LISTING_LIMIT = 30
 VECTOR_CANDIDATE_LIMIT = 24
@@ -72,6 +72,21 @@ INSIGHT_HINTS = {
     "summary",
     "trend",
     "trends",
+}
+DATASET_DETAIL_HINTS = {
+    "column",
+    "columns",
+    "feature",
+    "features",
+    "field",
+    "fields",
+    "first row",
+    "header",
+    "headers",
+    "preview",
+    "sample record",
+    "sample row",
+    "schema",
 }
 FOLLOW_UP_HINTS = {
     "it",
@@ -454,7 +469,7 @@ def is_analysis_query(query: str, *, dataset_id: str | None = None) -> bool:
         return True
 
     normalized = normalize_search_text(query)
-    if any(hint in normalized for hint in INSIGHT_HINTS):
+    if any(hint in normalized for hint in INSIGHT_HINTS | DATASET_DETAIL_HINTS):
         return True
 
     return any(alias in normalized for alias in ORDINAL_LOOKUP)
@@ -1006,6 +1021,54 @@ def analysis_response(session_id: str, query: str, dataset: dict[str, Any]) -> d
     }
 
 
+def metadata_fallback_response(session_id: str, dataset: dict[str, Any]) -> dict[str, Any]:
+    content_document = build_dataset_content_document(dataset)
+    columns = content_document.get("columns") or []
+    sample_rows = content_document.get("sampleRows") or []
+    dataset_title = dataset.get("title") or "Selected dataset"
+    description = str(dataset.get("description") or "").strip()
+
+    insights: list[str] = []
+    if columns:
+        insights.append(f"Detected columns: {', '.join(columns[:12])}.")
+    if sample_rows:
+        insights.append(f"Sample row: {sample_rows[0]}.")
+    if description:
+        insights.append(description)
+
+    summary = (
+        f"I couldn't reach the live dataset API, but I can still share cached metadata for {dataset_title}."
+    )
+
+    result = {
+        "title": f"Cached metadata for {dataset_title}",
+        "dataset": message_dataset_payload(dataset, 1),
+        "metrics": [
+            {"label": "Columns detected", "value": str(len(columns)) if columns else "Unavailable"},
+            {"label": "Sample rows", "value": str(len(sample_rows)) if sample_rows else "Unavailable"},
+            {"label": "Sector", "value": str(dataset.get("sector") or dataset.get("sectorKey") or "Unknown")},
+        ],
+        "sections": [
+            {"title": "Available metadata", "items": insights or ["Live dataset rows are unavailable right now."]},
+        ],
+    }
+
+    record_session_message(session_id, "assistant", summary)
+    state = session_state(session_id)
+    state["lastMatches"] = [dataset]
+    state["lastDataset"] = dataset
+
+    return {
+        "sessionId": session_id,
+        "restricted": False,
+        "content": summary,
+        "matches": [message_dataset_payload(dataset, 1)],
+        "insights": insights,
+        "result": result,
+        "history": _session_history[session_id],
+    }
+
+
 def chatbot_response(
     query: str,
     session_id: str | None = None,
@@ -1013,43 +1076,121 @@ def chatbot_response(
     dataset_id: str | None = None,
     dataset_title: str | None = None,
 ) -> dict[str, Any]:
-    del dataset_title
+    from .dataset_chatbot_service import chatbot_response as dataset_chatbot_response
 
+    normalized_query = compact_text(query)
     active_session_id = session_id or str(uuid.uuid4())
-    record_session_message(active_session_id, "user", query)
 
-    if is_analysis_query(query, dataset_id=dataset_id):
-        dataset, related_matches = resolve_requested_dataset(
-            query,
-            active_session_id,
-            sector=sector,
-            dataset_id=dataset_id,
-        )
-        if dataset is None:
-            return no_match_response(active_session_id, query)
+    if not normalized_query:
+        return no_match_response(active_session_id, "your request")
 
-        if not live_api_available():
-            return analysis_unavailable_response(
-                active_session_id,
-                dataset,
-                "I found a relevant dataset, but the live data API is unavailable right now, so record-level analysis could not be generated.",
-            )
+    record_session_message(active_session_id, "user", normalized_query)
+
+    normalized_sector = normalize_sector_key(sector) if sector and normalize_sector_key(sector) != "all" else None
+    target_dataset, _known_matches = resolve_requested_dataset(
+        normalized_query,
+        active_session_id,
+        sector=normalized_sector,
+        dataset_id=dataset_id,
+    )
+
+    if target_dataset and is_analysis_query(normalized_query, dataset_id=dataset_id):
+        state = session_state(active_session_id)
+        state["lastMatches"] = [target_dataset]
+        state["lastDataset"] = target_dataset
 
         try:
-            return analysis_response(active_session_id, query, dataset)
-        except ValueError as exc:
-            return analysis_unavailable_response(active_session_id, dataset, str(exc))
-        except requests.RequestException:
+            response = dataset_chatbot_response(
+                normalized_query,
+                session_id=active_session_id,
+                sector=target_dataset.get("sectorKey") or normalized_sector,
+                dataset_id=str(target_dataset.get("id") or dataset_id or ""),
+                dataset_title=dataset_title or target_dataset.get("title"),
+            )
+            if response.get("restricted") and "dataset api could not be reached" in normalize_search_text(response.get("content")):
+                return metadata_fallback_response(active_session_id, target_dataset)
+            return response
+        except Exception:
             return analysis_unavailable_response(
                 active_session_id,
-                dataset,
-                "I found a relevant dataset, but I couldn't reach the live data API to analyze the records right now.",
+                target_dataset,
+                "Dataset analysis is temporarily unavailable. Please retry in a moment.",
             )
 
-    listing_limit = listing_limit_for_query(query)
-    listing_bundle = hybrid_retrieve_bundle(query, sector=sector, limit=listing_limit)
-    matches = listing_bundle["results"]
-    total_count = listing_bundle["total"]
-    if not matches:
-        return no_match_response(active_session_id, query)
-    return listing_response(active_session_id, query, matches, total_count)
+    retrieval = hybrid_retrieve_bundle(normalized_query, sector=normalized_sector, limit=TOP_K_RESULTS)
+    matches = retrieval.get("results", [])
+    total_count = int(retrieval.get("total") or len(matches))
+
+    if matches:
+        return listing_response(active_session_id, normalized_query, matches, total_count)
+
+    state_filters = detect_query_states(normalize_search_text(normalized_query))
+    if normalized_sector or state_filters:
+        resolved_state = next(iter(state_filters), None)
+        return get_top_datasets(
+            active_session_id,
+            normalized_sector or "all",
+            limit=TOP_K_RESULTS,
+            state=resolved_state,
+        )
+
+    return no_match_response(active_session_id, normalized_query)
+
+
+def get_top_datasets(session_id: str, sector: str, limit: int = 10, state: str | None = None) -> dict[str, Any]:
+    from .dataset_catalog import read_trackers, sector_label, tracker_key_candidates
+
+    trackers = read_trackers()
+    normalized_sector = normalize_sector_key(sector) if sector else "all"
+    sectors_to_scan = sector_keys() if normalized_sector == "all" else [normalized_sector]
+    state_filters = detect_query_states(normalize_search_text(state or ""))
+
+    scored: list[tuple[int, int, dict[str, Any]]] = []
+    for sector_key in sectors_to_scan:
+        for dataset in sector_catalog_datasets(sector_key):
+            enriched = enrich_dataset(dataset)
+            if state_filters and not any(dataset_matches_state_filter(enriched, code) for code in state_filters):
+                continue
+
+            tracker_views = 0
+            tracker_downloads = 0
+            for tracker_key in tracker_key_candidates(sector_key, enriched["id"]):
+                tracker = trackers.get(tracker_key, {})
+                tracker_views = max(tracker_views, int(tracker.get("views") or 0))
+                tracker_downloads = max(tracker_downloads, int(tracker.get("downloads") or 0))
+
+            scored.append((tracker_views, tracker_downloads, enriched))
+
+    scored.sort(key=lambda item: (-item[0], -item[1], str(item[2].get("title") or "").lower()))
+    matches = [item[2] for item in scored[:limit]]
+    total_count = len(scored)
+
+    sector_text = sector_label(normalized_sector) if normalized_sector != "all" else "all sectors"
+    state_text = f" for {state}" if state else ""
+    message = (
+        f"I found {total_count} tracked datasets in {sector_text}{state_text}. "
+        f"Showing the top {len(matches)} by engagement."
+    )
+
+    insights = []
+    if matches:
+        insights.append(f"Top result: {matches[0].get('title')}.")
+        insights.append(f"Showing top {len(matches)} of {total_count} tracked datasets.")
+
+    record_session_message(session_id, "assistant", message)
+    state_store = session_state(session_id)
+    state_store["lastMatches"] = matches
+    if len(matches) == 1:
+        state_store["lastDataset"] = matches[0]
+    else:
+        state_store.pop("lastDataset", None)
+
+    return {
+        "sessionId": session_id,
+        "restricted": False,
+        "content": message,
+        "matches": [message_dataset_payload(dataset, rank) for rank, dataset in enumerate(matches, start=1)],
+        "insights": insights,
+        "result": None,
+        "history": _session_history[session_id],
+    }

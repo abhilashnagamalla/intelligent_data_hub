@@ -27,6 +27,8 @@ DATASET_QUERY_TERMS = {
     "columns",
     "count",
     "dataset",
+    "feature",
+    "features",
     "field",
     "fields",
     "maximum",
@@ -38,6 +40,10 @@ DATASET_QUERY_TERMS = {
     "records",
     "row",
     "rows",
+    "schema",
+    "header",
+    "headers",
+    "preview",
     "summary",
     "trend",
 }
@@ -46,7 +52,8 @@ INTENT_KEYWORDS = {
     "max": {"highest", "largest", "maximum", "max", "peak"},
     "min": {"lowest", "minimum", "min", "smallest"},
     "count": {"count", "how many", "number of", "total rows", "total records"},
-    "column": {"column", "columns", "field", "fields"},
+    "column": {"column", "columns", "feature", "features", "field", "fields", "header", "headers", "schema"},
+    "preview": {"example row", "first record", "first row", "preview", "sample record", "sample row", "show row"},
     "trend": {"change", "growth", "over time", "pattern", "timeline", "trend", "trends"},
 }
 TEMPORAL_KEYWORDS = {"date", "day", "month", "quarter", "time", "timeline", "week", "year"}
@@ -159,6 +166,23 @@ def top_samples(values: list[Any], *, limit: int = 5) -> list[str]:
     return [value for value, _ in Counter(normalized_values).most_common(limit)]
 
 
+def preview_row_pairs(records: list[dict[str, Any]], columns: list[str], *, limit: int = 8) -> list[str]:
+    if not records or not columns:
+        return []
+
+    first_record = records[0]
+    preview: list[str] = []
+    for column in columns:
+        value = str(first_record.get(column) or "").strip()
+        if not value:
+            continue
+        compact_value = value if len(value) <= 48 else f"{value[:45].rstrip()}..."
+        preview.append(f"{column}={compact_value}")
+        if len(preview) >= limit:
+            break
+    return preview
+
+
 def dataset_reference(dataset_id: str | None, dataset_title: str | None, records: list[dict[str, Any]], columns: list[str]) -> dict[str, Any]:
     return {
         "id": dataset_id,
@@ -233,6 +257,51 @@ def structured_result(
     }
 
 
+def year_wise_comparison(records, columns):
+    """Year-wise comparison and growth patterns."""
+    date_cols = detect_date_columns(records, columns)
+    numeric_cols = detect_numeric_columns(records, columns)
+    if not date_cols or not numeric_cols:
+        return []
+    
+    insights = []
+    for date_col in date_cols[:1]:
+        for num_col in numeric_cols:
+            # Group by year
+            years = {}
+            for r in records:
+                year = parse_temporal_value(r.get(date_col))[1] if parse_temporal_value(r.get(date_col)) else None
+                val = safe_float(r.get(num_col))
+                if year and val:
+                    y = str(year.year)
+                    years.setdefault(y, 0)
+                    years[y] += val
+            
+            if len(years) >= 2:
+                sorted_years = sorted(years)
+                first_y, first_v = sorted_years[0], years[sorted_years[0]]
+                last_y, last_v = sorted_years[-1], years[sorted_years[-1]]
+                growth = ((last_v - first_v) / first_v * 100) if first_v else 0
+                insights.append(f"{num_col}: {first_y}={format_metric_value(first_v)}, {last_y}={format_metric_value(last_v)} (growth: {growth:+.1f}%)")
+    
+    return insights
+
+def detect_anomalies(records, columns):
+    """IQR-based outliers (anomalies)."""
+    numeric_cols = detect_numeric_columns(records, columns)
+    anomalies = []
+    for col in numeric_cols:
+        values = [safe_float(r.get(col)) for r in records if safe_float(r.get(col))]
+        if len(values) < 4:
+            continue
+        q1, q3 = percentile(values, 0.25), percentile(values, 0.75)
+        iqr = q3 - q1
+        lower, upper = q1 - 1.5*iqr, q3 + 1.5*iqr
+        outliers = [v for v in values if v < lower or v > upper]
+        if outliers:
+            anomalies.append(f"{col}: {len(outliers)} outliers (IQR range: {format_metric_value(lower)}-{format_metric_value(upper)})")
+    return anomalies
+
 def summary_response(context: dict[str, Any], numeric_columns: list[str], date_columns: list[str]) -> dict[str, Any]:
     dataset = context["dataset"]
     records = context["records"]
@@ -250,6 +319,14 @@ def summary_response(context: dict[str, Any], numeric_columns: list[str], date_c
         observations.append(f"Representative categorical columns: {', '.join(categorical_columns[:3])}.")
     if date_columns:
         observations.append(f"Time-aware columns: {', '.join(date_columns[:3])}.")
+    sample_pairs = preview_row_pairs(records, columns)
+    if sample_pairs:
+        observations.append(f"First row preview: {'; '.join(sample_pairs)}.")
+
+    # Enhanced insights
+    year_insights = year_wise_comparison(records, columns)
+    anomaly_insights = detect_anomalies(records, columns)
+    observations.extend(year_insights + anomaly_insights)
 
     return structured_result(
         intent="summary",
@@ -272,6 +349,10 @@ def column_response(context: dict[str, Any], matched_columns: list[str], numeric
 
     if not matched_columns:
         answer = f"{dataset['title']} contains {len(columns):,} columns."
+        sample_pairs = preview_row_pairs(records, columns)
+        observations = [f"Available columns: {', '.join(columns[:10])}."]
+        if sample_pairs:
+            observations.append(f"First row preview: {'; '.join(sample_pairs)}.")
         return structured_result(
             intent="column",
             dataset=dataset,
@@ -281,7 +362,7 @@ def column_response(context: dict[str, Any], matched_columns: list[str], numeric
                 {"label": "Columns", "value": str(len(columns))},
                 {"label": "Preview", "value": ", ".join(columns[:5])},
             ],
-            observations=[f"Available columns: {', '.join(columns[:10])}."],
+            observations=observations,
         )
 
     column = matched_columns[0]
@@ -322,6 +403,38 @@ def column_response(context: dict[str, Any], matched_columns: list[str], numeric
         title=f"Column profile: {column}",
         columns=[column],
         metrics=metrics,
+        observations=observations,
+    )
+
+
+def preview_response(context: dict[str, Any], matched_columns: list[str]) -> dict[str, Any]:
+    dataset = context["dataset"]
+    records = context["records"]
+    columns = context["columns"]
+
+    selected_columns = matched_columns[:6] if matched_columns else columns[:8]
+    preview_pairs = preview_row_pairs(records, selected_columns)
+    if not preview_pairs:
+        preview_pairs = preview_row_pairs(records, columns)
+
+    answer = f"Here is a preview of the first available row from {dataset['title']}."
+    observations = []
+    if preview_pairs:
+        observations.append(f"First row: {'; '.join(preview_pairs)}.")
+    if len(columns) > len(selected_columns):
+        observations.append(f"Additional columns available: {', '.join(columns[:12])}.")
+
+    return structured_result(
+        intent="preview",
+        dataset=dataset,
+        answer=answer,
+        title="First row preview",
+        columns=selected_columns,
+        metrics=[
+            {"label": "Rows", "value": f"{dataset['rows']:,}"},
+            {"label": "Columns", "value": f"{dataset['columns']:,}"},
+            {"label": "Shown fields", "value": ", ".join(selected_columns[:5])},
+        ],
         observations=observations,
     )
 
@@ -593,6 +706,8 @@ def chatbot_response(
 
     if intent == "column":
         result = column_response(context, matched_columns, numeric_columns)
+    elif intent == "preview":
+        result = preview_response(context, matched_columns)
     elif intent == "count":
         result = count_response(context, query, matched_columns)
     elif intent == "trend":
