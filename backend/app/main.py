@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-from app.routers import datasets, domains, chatbot, auth
+from app.routers import datasets, domains, chatbot, auth, feedback
 from app.services.dataset_catalog import start_summary_refresh
 
 app = FastAPI(title="Intelligent Data Hub API")
@@ -23,6 +23,7 @@ app.include_router(datasets.router)
 app.include_router(domains.router)
 app.include_router(chatbot.router)
 app.include_router(auth.router, prefix="/auth")
+app.include_router(feedback.router, prefix="/feedback")
 
 
 @app.get("/")

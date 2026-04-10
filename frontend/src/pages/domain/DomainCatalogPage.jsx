@@ -7,11 +7,13 @@ import DatasetCatalogCard from "../../components/dataset/DatasetCatalogCard";
 import { formatSectorLabel } from "../../constants/sectors";
 import { indianStates, allStatesOption, getStateName } from "../../constants/states";
 import { formatNumberForLanguage } from "../../utils/dataFormatting";
+import { usePerformanceMonitor } from "../../utils/performanceMonitor";
 import { ChevronDown } from "lucide-react";
 
 export default function DomainCatalogPage() {
   const { sector } = useParams();
   const { t, i18n } = useTranslation();
+  const { measureRenderTime } = usePerformanceMonitor('DomainCatalogPage');
   const [datasets, setDatasets] = useState([]);
   const [stats, setStats] = useState({ datasets: 0 });
   const [page, setPage] = useState(1);
@@ -61,6 +63,16 @@ export default function DomainCatalogPage() {
       cancelled = true;
     };
   }, [page, sector, selectedState]);
+
+  // Measure page render performance
+  useEffect(() => {
+    if (!loading) {
+      measureRenderTime(() => {
+        // This callback measures when React has finished rendering
+        return true;
+      });
+    }
+  }, [loading, datasets.length, measureRenderTime]);
 
   return (
     <div className="space-y-6">

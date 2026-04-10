@@ -37,7 +37,7 @@ export default function AuthPanel() {
   const redirectTo = searchParams.get("redirect") || "/dashboard";
 
   return (
-    <div className="surface-panel w-full max-w-xl p-8 sm:p-10">
+    <div className="surface-panel w-full lg:max-w-xl p-6 sm:p-8 md:p-10">
       <div className="mb-8">
         <div className="stat-chip inline-flex bg-primary/10 text-primary">{t("Intelligent Data Hub")}</div>
         <h1 className="mt-5 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">

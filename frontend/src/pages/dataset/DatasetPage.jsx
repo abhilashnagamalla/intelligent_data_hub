@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import CatalogCard from '../../components/dataset/CatalogCard';
 import { formatSectorLabel } from '../../constants/sectors';
+import { usePerformanceMonitor } from '../../utils/performanceMonitor';
 
 const ITEMS_PER_PAGE = 50;
 
@@ -87,6 +88,7 @@ export default function DatasetPage() {
   const { domain } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { measureRenderTime } = usePerformanceMonitor('DatasetPage');
   const [searchParams, setSearchParams] = useSearchParams();
   const [datasets, setDatasets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -163,6 +165,16 @@ export default function DatasetPage() {
       controller.abort();
     };
   }, [activeSearch, normalizedSector, domain, currentPage]);
+
+  // Measure page render performance
+  useEffect(() => {
+    if (!loading) {
+      measureRenderTime(() => {
+        // This callback measures when React has finished rendering
+        return true;
+      });
+    }
+  }, [loading, datasets.length, measureRenderTime]);
 
   const updatePage = (page) => {
     const next = Math.min(Math.max(page, 1), totalPages);

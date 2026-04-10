@@ -1,8 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, User, X, Database, Bot, BarChart, Globe } from 'lucide-react';
+import { ArrowRight, User, X, Database, Bot, BarChart, Globe, Search, Bookmark, Map, PieChart } from 'lucide-react';
 import { useState } from 'react';
 import AuthForm from '../components/auth/AuthForm';
-import loginBg from '../../images/login.png';
 
 export default function Landing() {
   const [showAuth, setShowAuth] = useState(false);
@@ -17,14 +16,41 @@ export default function Landing() {
     setShowAuth(false);
   };
 
-  return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[var(--surface-base)]">
+  const featureCards = [
+    {
+      icon: Map,
+      title: 'GeoView',
+      description: 'Visualize geographic data on interactive maps and explore spatial patterns.',
+    },
+    {
+      icon: Database,
+      title: 'Dataset Explorer',
+      description: 'Browse, filter, and download 100+ datasets with detailed metadata.',
+    },
+    {
+      icon: Search,
+      title: 'AI Chatbot',
+      description: 'Ask questions about datasets and get intelligent insights instantly.',
+    },
+    {
+      icon: Bookmark,
+      title: 'Personal Dashboard',
+      description: 'Track favorites, saved searches, and your analysis history.',
+    },
+    {
+      icon: PieChart,
+      title: 'Visualization',
+      description: 'Create interactive charts, graphs, and custom visualizations from your data.',
+    },
+  ];
 
-      {/* ─── Main landing content ─── */}
-      <div className="relative z-10 flex w-full flex-col overflow-hidden">
-        {/* Navbar */}
-        <nav className="bg-white/95 shadow-sm backdrop-blur-sm dark:bg-slate-950/40">
-          <div className="relative mx-auto flex max-w-7xl items-center px-4 py-3 sm:px-6 sm:py-4 lg:px-16">
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-b from-white to-slate-50 dark:from-gray-950 dark:to-gray-900">
+
+      {/* ─── HEADER (DO NOT MODIFY) ─── */}
+      <header className="relative z-10 flex w-full flex-col overflow-hidden">
+        <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/95 shadow-sm backdrop-blur-sm dark:bg-slate-950/40">
+          <div className="relative flex items-center px-4 py-3 sm:px-6 sm:py-4 lg:px-16">
             <div className="flex flex-1 justify-start items-center gap-3">
               {/* Header Icons */}
               <div className="flex items-center gap-1">
@@ -68,17 +94,56 @@ export default function Landing() {
             </div>
           </div>
         </nav>
-      </div>
+      </header>
 
-      <main className="relative flex-1 overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <img
-            src={loginBg}
-            alt=""
-            className="h-full w-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-white/14 dark:bg-slate-950/42" />
+      {/* ─── MAIN CONTENT (BELOW HEADER) ─── */}
+      <main className="flex-1 overflow-hidden flex flex-col items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
+        <div className="w-full">
+          
+          {/* Badge - Moved Higher */}
+          <div className="flex justify-center mb-2">
+            <div className="inline-flex items-center rounded-full border-2 border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+              🚀 AI-Powered Government Data Hub
+            </div>
+          </div>
+
+          {/* Main Heading */}
+          <h2 className="text-center text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 dark:text-white mb-3 leading-tight">
+            Intelligent Data Hub
+          </h2>
+
+          {/* Subtitle */}
+          <p className="text-center text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Explore 100+ datasets with structured metadata, live previews, and actionable analytics for every research session.
+          </p>
+
+          {/* Section Title */}
+          <h3 className="text-center text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Everything You Need
+          </h3>
+          <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-6">
+            Comprehensive tools for government data exploration and analysis.
+          </p>
+
+          {/* Feature Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+            {featureCards.map((card) => (
+              <div
+                key={card.title}
+                className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <card.icon className="h-7 w-7 text-blue-600 dark:text-blue-400 mb-3" />
+                <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {card.title}
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {card.description}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
+      </main>
 
       {/* ─── Desktop split-panel auth (lg+) ─── */}
       <AnimatePresence>
@@ -105,7 +170,6 @@ export default function Landing() {
           </motion.div>
         )}
       </AnimatePresence>
-      </main>
 
       {/* ─── Mobile auth modal (< lg) ─── */}
       <AnimatePresence>

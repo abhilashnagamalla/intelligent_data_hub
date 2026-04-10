@@ -1,18 +1,21 @@
 {
-  "extends": "stylelint-config-recommended",
+  "extends": ["stylelint-config-recommended"],
   "rules": {
     "at-rule-no-unknown": [
       true,
       {
         "ignoreAtRules": [
+          "layer",
           "tailwind",
-          "layer", 
           "apply",
           "responsive",
-          "screen"
+          "screen",
+          "config"
         ]
       }
     ],
-    "declaration-block-no-redundant-longhand-properties": null
+    "declaration-block-no-redundant-longhand-properties": null,
+    "media-query-no-invalid": null,
+    "function-no-unknown": null
   }
 }

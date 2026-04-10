@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatSectorLabel } from '../../constants/sectors';
+import ContactUs from './ContactUs';
 
 const domainIcons = {
   agriculture: Apple,
@@ -53,6 +54,8 @@ export default function Sidebar({ open, onClose }) {
     return window.localStorage.getItem('idh-sidebar-collapsed') === '1';
   });
   const [domains, setDomains] = useState(defaultDomains);
+  const [hoveredDomain, setHoveredDomain] = useState(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -95,6 +98,10 @@ export default function Sidebar({ open, onClose }) {
         <SidebarContent
           collapsed={collapsed}
           setCollapsed={setCollapsed}
+          hoveredDomain={hoveredDomain}
+          setHoveredDomain={setHoveredDomain}
+          mousePos={mousePos}
+          setMousePos={setMousePos}
           domains={domains}
           isActive={isActive}
           handleNav={handleNav}
@@ -118,6 +125,10 @@ export default function Sidebar({ open, onClose }) {
         <SidebarContent
           collapsed={false}
           setCollapsed={() => {}}
+          hoveredDomain={hoveredDomain}
+          setHoveredDomain={setHoveredDomain}
+          mousePos={mousePos}
+          setMousePos={setMousePos}
           domains={domains}
           isActive={isActive}
           handleNav={handleNav}
@@ -130,7 +141,7 @@ export default function Sidebar({ open, onClose }) {
   );
 }
 
-function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav, t, showClose, onClose }) {
+function SidebarContent({ collapsed, setCollapsed, hoveredDomain, setHoveredDomain, mousePos, setMousePos, domains, isActive, handleNav, t, showClose, onClose }) {
   return (
     <>
       {/* Header */}
@@ -186,6 +197,16 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
                 <button
                   key={domain.sector}
                   onClick={() => handleNav(`/domain/${domain.sector}`)}
+                  onMouseEnter={() => setHoveredDomain(domain.sector)}
+                  onMouseLeave={() => {
+                    setHoveredDomain(null);
+                    setMousePos({ x: 0, y: 0 });
+                  }}
+                  onMouseMove={(e) => {
+                    if (collapsed) {
+                      setMousePos({ x: e.clientX + 10, y: e.clientY - 5 });
+                    }
+                  }}
                   style={isActiveDomain ? { borderLeftColor: sectorColor.light, borderLeftWidth: '4px' } : {}}
                   className={`w-full flex items-center gap-3 p-3 transition-all group relative ${
                     index !== domains.length - 1 ? 'border-b border-white/20' : ''
@@ -202,7 +223,21 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
                       style={{ backgroundColor: sectorColor.light }}
                     />
                   )}
-                  <Icon className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 opacity-80 group-hover:opacity-100" style={isActiveDomain ? { color: sectorColor.light } : {}} />
+                  <div className="relative">
+                    <Icon className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 opacity-80 group-hover:opacity-100" style={isActiveDomain ? { color: sectorColor.light } : {}} />
+                    {collapsed && hoveredDomain === domain.sector && mousePos.x > 0 && (
+                      <div 
+                        className="fixed bg-gray-950 text-white text-xs px-3 py-1.5 rounded whitespace-nowrap font-medium shadow-xl border border-white/80 z-[99999]"
+                        style={{
+                          left: `${mousePos.x}px`,
+                          top: `${mousePos.y}px`,
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        {t(formatSectorLabel(domain.sector))}
+                      </div>
+                    )}
+                  </div>
                   {!collapsed && (
                     <span className="truncate text-sm sm:text-base">
                       {t(formatSectorLabel(domain.sector))}
@@ -230,12 +265,8 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
         </button>
       </nav>
 
-      {/* Footer */}
-      <div className="flex-shrink-0 border-t-2 border-black p-4">
-        <div className="text-xs text-gray-500 text-center">
-          {!collapsed && 'v1.0.0'}
-        </div>
-      </div>
+      {/* Contact Us Section */}
+      <ContactUs collapsed={collapsed} />
     </>
   );
 }

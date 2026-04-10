@@ -4,12 +4,14 @@ import { LogOut, Settings, User2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/AuthContextFixed";
 
+
 export default function UserMenu() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, logout } = useContext(AuthContext);
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
+
 
   useEffect(() => {
     const handleClick = (event) => {
@@ -24,10 +26,13 @@ export default function UserMenu() {
     };
   }, []);
 
+
+
   if (!user) return null;
 
   return (
-    <div ref={menuRef} className="relative">
+    <>
+      <div ref={menuRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -79,8 +84,10 @@ export default function UserMenu() {
             <LogOut className="h-4 w-4" />
             {t("Logout")}
           </button>
+
         </div>
       )}
     </div>
+    </>
   );
 }

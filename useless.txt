@@ -1,50 +1,94 @@
-Useless files that don't affect project runtime/production (docs, notes, temps, unused):
+FILES NOT REQUIRED FOR DEPLOYMENT
+===================================
 
-# Documentation and Guides (.md files)
-IMPLEMENTATION_GUIDE.md
-CUSTOM_COLUMN_VISUALIZATION.md
-CUSTOM_VIZ_TESTING.md
-STATE_FILTER_FEATURE.md
-VISUALIZATION_PERFORMANCE_OPTIMIZATION.md
-VISUALIZATION_ENGINE_SUMMARY.md
-VISUALIZATION_ENGINE_EXAMPLES.md
-VISUALIZATION_ENGINE_IMPLEMENTATION.md
-TODO.md
-frontend/TODO.md
-frontend/src/pages/TODO.md
+The following files/directories are not essential for frontend/backend working or deployment.
+Remove these files to optimize your deployment package and repository size.
 
-# Setup and Structure Docs
-setup.txt
-proj_structure.txt
+DOCUMENTATION FILES (Can be deleted - saved in GitHub):
+- README.md (optional, keep for repo documentation)
+- CHATBOT_DOMAIN_RESTRICTION.md
+- CHATBOT_ENHANCEMENT_SUMMARY.md
+- CHATBOT_IMPLEMENTATION_GUIDE.md
+- CHATBOT_USER_GUIDE.md
+- CUSTOM_COLUMN_VISUALIZATION.md
+- CUSTOM_VIZ_TESTING.md
+- IMPLEMENTATION_CHECKLIST.md
+- IMPLEMENTATION_GUIDE.md
+- STATE_FILTER_FEATURE.md
+- TODO.md
+- VISUALIZATION_ENGINE_EXAMPLES.md
+- VISUALIZATION_ENGINE_IMPLEMENTATION.md
+- VISUALIZATION_ENGINE_SUMMARY.md
+- VISUALIZATION_PERFORMANCE_OPTIMIZATION.md
+- frontend/TODO.md
+- frontend/src/pages/TODO.md
 
-# Explanation Docs (entire folder)
-Explanation/backend/project_structure.txt
-Explanation/backend/tech_stack.txt
-Explanation/backend/file_explanations.txt
-Explanation/frontend/project_structure.txt
-Explanation/frontend/tech_stack.txt
-Explanation/frontend/file_explanations.txt
+TEST & DEBUG FILES:
+- test_chatbot_domain_restriction.py
+- test_data_structure.py
+- test_domain_quick.py
+- fix_dates.py
+- output.txt
 
-# Build/Logs
-frontend/build_output.txt
+SETUP & CONFIGURATION NOTES:
+- setup.txt (setup instructions, not needed after setup)
+- proj_structure.txt (project structure notes)
 
-# Temp/Journal Files (auto-generated)
-backend/data/idh.db-journal
-backend/data/idh.sqlite3-journal
-backend/data/sqlite_probe.db-journal
-backend/data/user_store.tmp
-backend/summary/*.tmp
+EXPLANATION & DOCUMENTATION DIRECTORIES:
+- Explanation/backend/project_structure.txt
+- Explanation/backend/tech_stack.txt
+- Explanation/backend/file_explanations.txt
+- Explanation/frontend/project_structure.txt
+- Explanation/frontend/tech_stack.txt
+- Explanation/frontend/file_explanations.txt
+- Explanation/ (entire folder)
 
-# Potentially Unused Scripts (non-core, experimental)
-fix_dates.py
-test_data_structure.py
-backend/resrc_extract.py
-backend/cols.txt
-backend/manual_probe.txt
-backend/package.json  # frontend-like in backend?
-backend/package-lock.json  # frontend-like in backend?
+BUILD OUTPUT & LOGS:
+- frontend/build_output.txt
+- output.txt
 
-# VSCode Notes (if any)
-proj_structure.txt  # duplicate?
+TEMP/JOURNAL FILES (auto-generated, Git-ignored):
+- backend/data/idh.db-journal
+- backend/data/idh.sqlite3-journal
+- backend/data/sqlite_probe.db-journal
+- backend/data/user_store.tmp
+- backend/summary/*.tmp
+- backend/cols.txt
+- backend/manual_probe.txt
 
-Note: Core source code, data JSON/DBs, configs, Dockerfiles excluded as they affect the project.
+DUPLICATE/UNUSED FILES:
+- backend/package.json (not needed, frontend only)
+- backend/package-lock.json (not needed, frontend only)
+- backend/resrc_extract.py (experimental/unused)
+
+BUILD & CACHE DIRECTORIES (Git-ignored, auto-generated):
+- .history/ (VS Code history)
+- __pycache__/ (Python cache)
+- node_modules/ (should not be committed)
+- .next/ (Next.js cache if using)
+- dist/ (build output)
+- build/ (build output)
+
+FILES TO KEEP FOR DEPLOYMENT:
+✓ backend/ - All backend code and services
+✓ frontend/ - All frontend code and components
+✓ data/ - Data files and datasets
+✓ docker-compose.yml - Docker orchestration
+✓ nginx.conf - Nginx web server configuration
+✓ Dockerfile (in backend/ and frontend/) - Container images
+✓ package.json + package-lock.json (frontend only) - Node dependencies
+✓ backend/requirements.txt - Python dependencies
+✓ .env - Environment variables (with production values)
+✓ .gitignore - Git configuration
+✓ .git/ - Git repository
+✓ india.topo.json - Geographic/topology data for maps
+✓ README.md - Main project documentation
+
+DEPLOYMENT OPTIMIZATION TIPS:
+1. Create .dockerignore to exclude unnecessary files from Docker images
+2. Use .gitignore to prevent committing test files and temporary data
+3. Clean up local .history/ and __pycache__/ before deployment
+4. Ensure sensitive data in .env is not committed to repository
+5. Use environment-specific .env files (.env.production, .env.development)
+6. Consider serving static files (india.topo.json) from CDN for production
+7. Remove test databases and temporary files from backend/data/ before deployment

@@ -134,7 +134,14 @@ const resources = {
       'Loading datasets...': 'Loading datasets...',
       'No datasets found.': 'No datasets found.',
       'Active Researcher': 'Active Researcher',
-      'Verified': 'Verified'
+      'Verified': 'Verified',
+      'Go to page': 'Go to page',
+      'Go': 'Go',
+      'Jump to page': 'Jump to page',
+      'First page': 'First page',
+      'Previous page': 'Previous page',
+      'Next page': 'Next page',
+      'Last page': 'Last page'
     }
   },
   hi: {
@@ -268,7 +275,14 @@ const resources = {
       'Loading datasets...': 'डेटासेट लोड हो रहे हैं...',
       'No datasets found.': 'कोई डेटासेट नहीं मिला।',
       'Active Researcher': 'सक्रिय शोधकर्ता',
-      'Verified': 'सत्यापित'
+      'Verified': 'सत्यापित',
+      'Go to page': 'पृष्ठ पर जाएं',
+      'Go': 'जाएं',
+      'Jump to page': 'पृष्ठ पर कूदें',
+      'First page': 'पहला पृष्ठ',
+      'Previous page': 'पिछला पृष्ठ',
+      'Next page': 'अगला पृष्ठ',
+      'Last page': 'अंतिम पृष्ठ'
     }
   },
   te: {
@@ -376,7 +390,14 @@ const resources = {
       'Loading datasets...': 'డేటాసెట్‌లు లోడ్ అవుతున్నాయి...',
       'No datasets found.': 'డేటాసెట్‌లు కనుగొనబడలేదు.',
       'Active Researcher': 'సక్రియ పరిశోధకుడు',
-      'Verified': 'ధృవీకరించబడింది'
+      'Verified': 'ధృవీకరించబడింది',
+      'Go to page': 'పేజీకు వెళ్లండి',
+      'Go': 'వెళ్లండి',
+      'Jump to page': 'పేజీకు దూకండి',
+      'First page': 'మొదటి పేజీ',
+      'Previous page': 'మునుపటి పేజీ',
+      'Next page': 'తదుపరి పేజీ',
+      'Last page': 'చివరి పేజీ'
     }
   },
   // Add similar translations for ta, kn, ml, bn, mr, gu based on existing patterns
@@ -500,7 +521,14 @@ const resources = {
       'Dataset summaries & downloads': 'ಡೇಟಾಸೆಟ್ ಸಾರಾಂಶಗಳು ಮತ್ತು ಡೌನ್‌ಲೋಡ್‌ಗಳು',
       'Visualization': 'ಗ್ರಾಫ್',
       'Ask about data...': 'ಡೇಟಾ ಬಗ್ಗೆ ಕೇಳಿ...',
-      'Powered by domain data analysis • Secure & accurate insights': 'ಡೊಮೈನ್ ಡೇಟಾ ವಿಶ್ಲೇಷಣೆಯಿಂದ • ಸುರಕ್ಷಿತ ಮತ್ತು ನಿಖರ ಒಳನೋಟಗಳು'
+      'Powered by domain data analysis • Secure & accurate insights': 'ಡೊಮೈನ್ ಡೇಟಾ ವಿಶ್ಲೇಷಣೆಯಿಂದ • ಸುರಕ್ಷಿತ ಮತ್ತು ನಿಖರ ಒಳನೋಟಗಳು',
+      'Go to page': 'ಪುಟಕ್ಕೆ ಹೋಗಿ',
+      'Go': 'ಹೋಗಿ',
+      'Jump to page': 'ಪುಟಕ್ಕೆ ಜಿಗಿಯಿರಿ',
+      'First page': 'ಮೊದಲ ಪುಟ',
+      'Previous page': 'ಹಿಂದಿನ ಪುಟ',
+      'Next page': 'ಮುಂದಿನ ಪುಟ',
+      'Last page': 'ಕೊನೆಯ ಪುಟ'
     }
   },
   ml: {
@@ -561,7 +589,14 @@ const resources = {
       'Dataset summaries & downloads': 'ഡേറ്റാസെറ്റ് സംഗ്രഹങ്ങൾ & ഡൗൺലോഡുകൾ',
       'Visualization': 'വിഷ്വലൈസേഷൻ',
       'Ask about data...': 'ഡേറ്റയെ കുറിച്ച് ചോദിക്കുക...',
-      'Powered by domain data analysis • Secure & accurate insights': 'ഡൊമെയ്ൻ ഡേറ്റ വിശകലനത്താൽ • സുരക്ഷിതവും കൃത്യവുമായ ഉൾക്കാഴ്ചകൾ'
+      'Powered by domain data analysis • Secure & accurate insights': 'ഡൊമെയ്ൻ ഡേറ്റ വിശകലനത്താൽ • സുരക്ഷിതവും കൃത്യവുമായ ഉൾക്കാഴ്ചകൾ',
+      'Go to page': 'പേജിലേക്കുപോകുക',
+      'Go': 'പോകുക',
+      'Jump to page': 'പേജിലേക്കുചാട്ടടി',
+      'First page': 'ആദ്യ പേജ്',
+      'Previous page': 'മുമ്പുള്ള പേജ്',
+      'Next page': 'അടുത്ത പേജ്',
+      'Last page': 'അവസാന പേജ്'
     }
   },
   bn: {
@@ -643,7 +678,14 @@ const resources = {
       'Downloads': 'डाउनलोड',
       'Updated': 'अपडेट केले',
       'Published': 'प्रकाशित',
-      'Back to Catalogs': 'कॅटलॉग कडे परत'
+      'Back to Catalogs': 'कॅटलॉग कडे परत',
+      'Go to page': 'पृष्ठावर जा',
+      'Go': 'जा',
+      'Jump to page': 'पृष्ठावर उड',
+      'First page': 'पहिलो पृष्ठ',
+      'Previous page': 'मागील पृष्ठ',
+      'Next page': 'पुढील पृष्ठ',
+      'Last page': 'अंतिम पृष्ठ'
     }
   },
   gu: {
@@ -684,7 +726,14 @@ const resources = {
       'Downloads': 'ડાઉનલોડ્સ',
       'Updated': 'અપડેટ કર્યું',
       'Published': 'પ્રકાશિત',
-      'Back to Catalogs': 'કેટલોગ પર પાછા ફરો'
+      'Back to Catalogs': 'કેટલોગ પર પાછા ફરો',
+      'Go to page': 'પૃષ્ઠ પર જાઓ',
+      'Go': 'જાઓ',
+      'Jump to page': 'પૃષ્ઠ પર કૂદો',
+      'First page': 'પ્રથમ પૃષ્ઠ',
+      'Previous page': 'પૂર્વ પૃષ્ઠ',
+      'Next page': 'આગલું પૃષ્ઠ',
+      'Last page': 'છેલ્લું પૃષ્ઠ'
     }
   }
 };

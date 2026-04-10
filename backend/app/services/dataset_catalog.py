@@ -1135,12 +1135,15 @@ def read_trackers() -> dict[str, dict[str, int]]:
 
 
 def save_trackers() -> None:
+    global _tracker_cache
     ensure_storage()
     with _tracker_lock:
         trackers = read_trackers()
         temp_file = TRACKERS_FILE.with_suffix(".tmp")
         temp_file.write_text(json.dumps(trackers, indent=2, sort_keys=True), encoding="utf-8")
         temp_file.replace(TRACKERS_FILE)
+        # Invalidate cache to ensure fresh read from disk on next call
+        _tracker_cache = None
 
 
 def load_resource_metadata_cache() -> dict[str, dict[str, Any]]:

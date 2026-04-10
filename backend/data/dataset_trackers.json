@@ -59,6 +59,10 @@
     "downloads": 0,
     "views": 1
   },
+  "agriculture:d397a6c0-a644-4137-9239-c60f7f1d03ff": {
+    "downloads": 0,
+    "views": 1
+  },
   "agriculture:e9610ab7-e28e-48db-bfb1-2aca7561d334": {
     "downloads": 0,
     "views": 1
@@ -93,7 +97,7 @@
   },
   "census:4d936669-40d2-4740-9777-3206650e0edc": {
     "downloads": 1,
-    "views": 3
+    "views": 4
   },
   "census:59ae9285-8aef-4683-9421-9d6d92f2bfa4": {
     "downloads": 1,
@@ -125,7 +129,7 @@
   },
   "education:49a42cbd-44c4-4a2d-a133-9d7259737103": {
     "downloads": 0,
-    "views": 3
+    "views": 4
   },
   "education:6fc89278-14fd-4538-8be1-90e3158e82d0": {
     "downloads": 0,
@@ -191,13 +195,17 @@
     "downloads": 0,
     "views": 1
   },
+  "health:d7d03ee8-c69a-4425-beef-81135c567cee": {
+    "downloads": 0,
+    "views": 1
+  },
   "health:e259e0c7-8e81-4805-a69c-dbecf9a04429": {
     "downloads": 0,
     "views": 2
   },
   "health:f55f64f0-3511-475a-9975-82485150933b": {
-    "downloads": 0,
-    "views": 4
+    "downloads": 1,
+    "views": 5
   },
   "transport:105ab1ed-e1a3-4942-9e8e-3c8bd34f8d90": {
     "downloads": 0,

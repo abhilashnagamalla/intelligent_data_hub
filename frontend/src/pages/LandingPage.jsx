@@ -48,108 +48,98 @@ export default function LandingPage() {
     }
   };
 
+  const homeFeatures = [
+    {
+      icon: Database,
+      titleKey: "Dataset Explorer",
+      textKey: "Browse, filter, and download 800+ datasets.",
+    },
+    {
+      icon: Search,
+      titleKey: "AI Chatbot",
+      textKey: "Ask questions about datasets and get instant insights.",
+    },
+    {
+      icon: Bookmark,
+      titleKey: "Personal Dashboard",
+      textKey: "Track favorites, saved searches, and analysis history.",
+    },
+  ];
+
   return (
-    <div className="app-shell bg-[var(--surface-base)] dark:bg-white" style={{ '--surface-base': '#F8FAFC' }}>
-      <style>{`.landing-page { --bg-primary: #F8FAFC; --bg-secondary: white; --text-primary: #0F172A; --text-secondary: #64748B; --border: #E2E8F0; --surface-base: #f8fafc; --surface-elevated: #ffffff; --surface-muted: #f3f4f6; --surface-contrast: #0f172a; }`}</style>
-      <div className="flex flex-col">
-        {/* Header Navigation */}
-        <div className="mx-auto w-full max-w-7xl px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <nav className="surface-panel flex items-center justify-between px-5 py-4 sm:px-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-lg font-black text-white shadow-lg">
-                IDH
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand-secondary)]">IDH</div>
-                <div className="text-lg font-bold text-[var(--text-primary)]">{t("Intelligent Data Hub")}</div>
-              </div>
+    <div className="app-shell min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+      {/* Header Navigation - EXCLUDED FROM CHANGES */}
+      <div className="w-full px-5 py-6 sm:px-6 lg:px-8 border-b border-gray-200">
+        <nav className="flex items-center justify-between px-6 py-4 rounded-2xl border-2 border-black bg-white">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-black text-white">
+              IDH
             </div>
-            <div className="flex items-center gap-3">
-              <Link to="/datasets" className="btn-secondary">
-                {t("All Datasets")}
-              </Link>
-              <button
-                type="button"
-                onClick={handleGoogleAccess}
-                disabled={loading}
-                className="btn-primary shadow-none hover:brightness-100 hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70"
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">IDH</div>
+              <div className="text-lg font-bold text-gray-900">{t("Intelligent Data Hub")}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link to="/datasets" className="px-4 py-2 rounded-lg border-2 border-black bg-white font-semibold text-gray-900 hover:bg-gray-100 transition-colors">
+              {t("All Datasets")}
+            </Link>
+            <button
+              type="button"
+              onClick={handleGoogleAccess}
+              disabled={loading}
+              className="px-4 py-2 rounded-lg border-2 border-black bg-black font-semibold text-white hover:bg-gray-800 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {user ? t("Open Dashboard") : t("Get Started")}
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      {/* Main Content - Non-scrollable, fits in viewport */}
+      <div className="flex-1 flex flex-col items-center justify-center px-5 py-8 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="w-full max-w-5xl">
+          {/* Badge */}
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600">
+              🚀 {t("AI-Powered Government Data Hub")}
+            </div>
+          </div>
+
+          {/* Main Heading */}
+          <h1 className="text-center text-4xl sm:text-5xl lg:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+            {t("Intelligent Data Hub")}
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-center text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            {t("Unlock 100+ datasets with AI insights, analytics, and intelligent search.")}
+          </p>
+
+          {/* Section Title */}
+          <h2 className="text-center text-2xl font-bold text-gray-900 mb-3">
+            {t("Everything You Need")}
+          </h2>
+          <p className="text-center text-gray-600 text-sm mb-6 max-w-xl mx-auto">
+            {t("Comprehensive tools for government data exploration and analysis.")}
+          </p>
+
+          {/* Three Feature Cards - Horizontal Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {homeFeatures.map((feature) => (
+              <div
+                key={feature.titleKey}
+                className="rounded-2xl border-2 border-black bg-white p-6 hover:shadow-lg transition-shadow"
               >
-                {user ? t("Open Dashboard") : t("Continue with Google")}
-              </button>
-            </div>
-          </nav>
-        </div>
-
-        {/* Main Content Section - Full Width */}
-        <div className="w-full px-5 py-10 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-              <div>
-                <div className="stat-chip inline-flex bg-primary/10 text-primary">
-                  {t("Built for public-sector data work")}
-                </div>
-                <h1 className="mt-6 max-w-4xl text-5xl font-bold leading-[1.02] text-[var(--text-primary)] sm:text-6xl lg:text-7xl">
-                  {t("Intelligent Data Hub")}
-                </h1>
-                <p className="mt-6 max-w-3xl text-lg leading-8 text-muted sm:text-xl">
-                  {t("Explore 100+ datasets with structured metadata, live previews, and realistic analytics for every research session.")}
+                <feature.icon className="h-8 w-8 text-blue-600 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {t(feature.titleKey)}
+                </h3>
+                <p className="text-sm text-gray-600 leading-6">
+                  {t(feature.textKey)}
                 </p>
-
-                {error && (
-                  <div className="mt-6 max-w-2xl rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
-                    {error}
-                  </div>
-                )}
-
-                <div className="mt-8 flex flex-wrap gap-4">
-                  <button
-                    type="button"
-                    onClick={handleGoogleAccess}
-                    disabled={loading}
-                    className="btn-primary px-6 py-4 shadow-none hover:brightness-100 hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {user ? t("Open Dashboard") : t("Continue with Google")}
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                  <Link to="/datasets" className="btn-secondary px-6 py-4">
-                    {t("All Datasets")}
-                  </Link>
-                </div>
-
-                <div className="mt-10 grid gap-4 sm:grid-cols-3">
-                  {[
-                    { label: t("100+ datasets"), value: "100+" },
-                    { label: t("6 live sectors"), value: "06" },
-                    { label: t("Actionable metadata"), value: "24/7" },
-                  ].map((item) => (
-                    <div key={item.label} className="surface-card p-5">
-                      <div className="text-3xl font-bold text-[var(--text-primary)]">{item.value}</div>
-                      <div className="mt-2 text-sm text-muted">{item.label}</div>
-                    </div>
-                  ))}
-                </div>
               </div>
-
-              <div className="surface-panel overflow-hidden p-6 sm:p-8">
-                <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(11,99,206,0.12),rgba(15,118,110,0.08))] p-6">
-                  <div className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--brand-secondary)]">
-                    {t("Public sector intelligence")}
-                  </div>
-                  <h2 className="mt-4 text-3xl font-bold text-[var(--text-primary)]">
-                    {t("Move faster from discovery to decision with structured datasets, traceable metadata, and reusable analysis flows.")}
-                  </h2>
-                  <div className="mt-8 grid gap-4">
-                    {featureCards.map((card) => (
-                      <div key={card.titleKey} className="surface-card p-5">
-                        <card.icon className="h-6 w-6 text-primary" />
-                        <div className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{t(card.titleKey)}</div>
-                        <div className="mt-2 text-sm leading-6 text-muted">{t(card.textKey)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
+            ))}
           </div>
         </div>
       </div>

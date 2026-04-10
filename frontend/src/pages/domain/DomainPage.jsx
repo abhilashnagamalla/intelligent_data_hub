@@ -10,6 +10,7 @@ import CatalogCard from '../../components/dataset/CatalogCardLive';
 import { getSectorBackground } from '../../constants/backgrounds';
 import { formatSectorLabel } from '../../constants/sectors';
 import { allStatesOption, getStateName, indianStates } from '../../constants/states';
+import { usePerformanceMonitor } from '../../utils/performanceMonitor';
 
 const ITEMS_PER_PAGE = 9;
 
@@ -17,6 +18,7 @@ export default function DomainPage() {
   const { sector } = useParams();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { measureRenderTime } = usePerformanceMonitor('DomainPage');
 
   const [catalogs, setCatalogs] = useState([]);
   const [stats, setStats] = useState({ catalogs: 0, datasets: 0 });
@@ -103,6 +105,16 @@ export default function DomainPage() {
     };
   }, [activeStateCode, hasActiveStateFilter, page, sector]);
 
+  // Measure page render performance
+  useEffect(() => {
+    if (!catalogLoading) {
+      measureRenderTime(() => {
+        // This callback measures when React has finished rendering
+        return true;
+      });
+    }
+  }, [catalogLoading, catalogs.length, measureRenderTime]);
+
   const totalPages = Math.max(1, stats.catalogs || 0);
   const sectorBackground = getSectorBackground(sector);
 
@@ -174,10 +186,10 @@ export default function DomainPage() {
         )}
 
         <section className="space-y-6">
-          <div className="relative min-h-[320px]">
+          <div className="relative min-h-[400px]">
             {catalogLoading && catalogs.length > 0 && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-white/75 text-gray-600 backdrop-blur-sm dark:bg-gray-950/75 dark:text-gray-300">
-                <div className="rounded-2xl border-2 border-black bg-white px-6 py-3 text-black">{t('Updating catalogs...')}</div>
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-white/75 backdrop-blur-sm dark:bg-gray-950/75">
+                <div className="rounded-2xl border-2 border-black bg-white px-8 py-4 text-base font-medium text-black dark:text-white dark:bg-gray-900">{t('Updating catalogs...')}</div>
               </div>
             )}
 
