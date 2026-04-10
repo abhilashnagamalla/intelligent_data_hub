@@ -74,7 +74,7 @@ export default function ProfilePage() {
         </div>
 
         {loading ? (
-          <div className="text-muted">{t("Loading datasets...")}</div>
+          <div className="rounded-2xl border-2 border-black bg-white px-6 py-3 inline-block" style={{ color: '#0F172A' }}>{t("Loading datasets...")}</div>
         ) : wishlist.length === 0 ? (
           <div className="surface-card p-8 text-center text-muted">{t("No saved datasets yet.")}</div>
         ) : (

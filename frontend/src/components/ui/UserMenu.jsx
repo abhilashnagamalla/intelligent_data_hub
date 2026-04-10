@@ -44,7 +44,7 @@ export default function UserMenu() {
         <div className="absolute right-0 mt-3 w-60 rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-2 shadow-[var(--shadow-panel)]">
           <div className="rounded-2xl bg-[var(--surface-muted)] px-4 py-3">
             <div className="font-semibold text-[var(--text-primary)]">{user.name}</div>
-            <div className="text-sm text-muted">{user.email}</div>
+            <div className="text-sm text-[var(--text-primary)]">{user.email}</div>
           </div>
           <button
             type="button"

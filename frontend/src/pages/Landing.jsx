@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, User, X } from 'lucide-react';
+import { ArrowRight, User, X, Database, Bot, BarChart, Globe } from 'lucide-react';
 import { useState } from 'react';
 import AuthForm from '../components/auth/AuthForm';
-import { landingBackground } from '../constants/backgrounds';
+import loginBg from '../../images/login.png';
 
 export default function Landing() {
   const [showAuth, setShowAuth] = useState(false);
@@ -23,16 +23,33 @@ export default function Landing() {
       {/* ─── Main landing content ─── */}
       <div className="relative z-10 flex w-full flex-col overflow-hidden">
         {/* Navbar */}
-        <nav className="border-b border-slate-200/80 bg-white/88 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/20">
+        <nav className="bg-white/95 shadow-sm backdrop-blur-sm dark:bg-slate-950/40">
           <div className="relative mx-auto flex max-w-7xl items-center px-4 py-3 sm:px-6 sm:py-4 lg:px-16">
-            <div className="flex flex-1 justify-start">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary sm:h-10 sm:w-10">
+            <div className="flex flex-1 justify-start items-center gap-3">
+              {/* Header Icons */}
+              <div className="flex items-center gap-1">
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-orange-100 text-orange-600 border-2 border-black dark:bg-orange-900/30 dark:text-orange-400 dark:border-black">
+                  <Globe className="h-4 w-4 sm:h-7 sm:w-7" />
+                </div>
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-blue-100 text-blue-600 border-2 border-black dark:bg-blue-900/30 dark:text-blue-400 dark:border-black">
+                  <Database className="h-4 w-4 sm:h-7 sm:w-7" />
+                </div>
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-purple-100 text-purple-600 border-2 border-black dark:bg-purple-900/30 dark:text-purple-400 dark:border-black">
+                  <Bot className="h-4 w-4 sm:h-7 sm:w-7" />
+                </div>
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-green-100 text-green-600 border-2 border-black dark:bg-green-900/30 dark:text-green-400 dark:border-black">
+                  <BarChart className="h-4 w-4 sm:h-7 sm:w-7" />
+                </div>
+              </div>
+
+              {/* IDH Logo */}
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-black border-2 border-black sm:h-14 sm:w-14">
                 <span className="text-sm font-black text-white sm:text-lg">IDH</span>
               </div>
             </div>
 
             <div className="pointer-events-none absolute left-1/2 -translate-x-1/2">
-              <h1 className="text-base font-black text-slate-950 sm:text-2xl dark:text-white">
+              <h1 className="text-2xl font-black text-slate-950 sm:text-4xl dark:text-white">
                 Intelligent Data Hub
               </h1>
             </div>
@@ -40,9 +57,11 @@ export default function Landing() {
             <div className="flex flex-1 justify-end">
               <button
                 onClick={() => handleOpenAuth('login')}
-                className="inline-flex items-center justify-center gap-2 rounded-3xl border border-slate-300 bg-white/70 px-4 py-2.5 text-sm font-semibold text-slate-950 backdrop-blur-sm transition-colors hover:bg-white/95 sm:px-6 sm:py-3 sm:text-base dark:border-white/20 dark:bg-slate-900/50 dark:text-white dark:hover:bg-slate-900/70"
+                className="inline-flex items-center justify-center gap-2 rounded-3xl border-2 border-black bg-white/70 px-4 py-2.5 text-sm font-semibold text-slate-950 backdrop-blur-sm transition-colors hover:bg-white/95 sm:px-6 sm:py-3 sm:text-base dark:border-black dark:bg-slate-900/50 dark:text-white dark:hover:bg-slate-900/70"
               >
-                <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-black text-white border-2 border-black dark:bg-black dark:border-black">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
                 <span>Get Started</span>
                 <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
@@ -52,9 +71,9 @@ export default function Landing() {
       </div>
 
       <main className="relative flex-1 overflow-hidden">
-        <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <img
-            src={landingBackground}
+            src={loginBg}
             alt=""
             className="h-full w-full object-cover object-center"
           />
@@ -76,7 +95,7 @@ export default function Landing() {
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.96 }}
               onClick={handleCloseAuth}
-              className="absolute right-4 top-4 z-50 rounded-full border border-white/20 bg-white/20 p-3 text-white transition-colors hover:bg-white/30"
+              className="absolute right-4 top-4 z-50 rounded-full border border-white/20 bg-white/20 p-3 text-black transition-colors hover:bg-white/30"
             >
               <X className="h-6 w-6" />
             </motion.button>
@@ -111,7 +130,7 @@ export default function Landing() {
                 onClick={handleCloseAuth}
                 className="absolute right-4 top-4 z-50 rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
-                <X className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+                <X className="h-5 w-5 text-black" />
               </button>
               <div className="p-6">
                 <AuthForm mode={authMode} setMode={setAuthMode} />

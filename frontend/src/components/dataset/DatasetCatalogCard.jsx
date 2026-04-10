@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bookmark, Download, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { formatNumberForLanguage } from '../../utils/dataFormatting';
 import api from "../../api";
 import { AuthContext } from "../../context/AuthContextFixed";
 import { UserDataContext } from "../../context/UserDataContext";
@@ -15,7 +16,7 @@ function formatDate(value) {
 }
 
 export default function DatasetCatalogCard({ dataset }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, googleLogin } = useContext(AuthContext);
   const { toggleWishlist, isWishlisted } = useContext(UserDataContext);
@@ -159,14 +160,14 @@ export default function DatasetCatalogCard({ dataset }) {
           <Eye className="h-4 w-4 text-primary" />
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Views")}</div>
-            <div className="font-semibold text-[var(--text-primary)]">{stats.views.toLocaleString()}</div>
+            <div className="font-semibold text-[var(--text-primary)]">{formatNumberForLanguage(stats.views, i18n.language)}</div>
           </div>
         </div>
         <div className="rounded-lg border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 flex items-center gap-3 p-4">
           <Download className="h-4 w-4 text-secondary" />
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Downloads")}</div>
-            <div className="font-semibold text-[var(--text-primary)]">{stats.downloads.toLocaleString()}</div>
+            <div className="font-semibold text-[var(--text-primary)]">{formatNumberForLanguage(stats.downloads, i18n.language)}</div>
           </div>
         </div>
       </div>

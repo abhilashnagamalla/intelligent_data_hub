@@ -27,11 +27,29 @@
 @layer components {
   .glass {
     background: rgba(255, 255, 255, 0.25);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.18);
   }
   .dark .glass {
     background: rgba(30, 41, 59, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Ensure select and option elements are visible in dark mode */
+  select {
+    color-scheme: light;
+  }
+  .dark select {
+    color-scheme: dark;
+  }
+  
+  option {
+    color: #0F172A;
+    background-color: white;
+  }
+  .dark option {
+    color: #F8FAFC;
+    background-color: #1E293B;
   }
 }

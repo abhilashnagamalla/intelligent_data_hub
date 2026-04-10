@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../../api";
+import { formatNumberForLanguage } from "../../utils/dataFormatting";
 import DomainOverviewCard from "../../components/domain/DomainOverviewCard";
 
 export default function DashboardPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +48,7 @@ export default function DashboardPage() {
   );
 
   if (loading) {
-    return <div className="text-muted">{t("Loading dashboard...")}</div>;
+    return <div className="surface-panel p-6 text-center text-[var(--text-primary)]">{t("Loading dashboard...")}</div>;
   }
 
   return (
@@ -69,13 +70,13 @@ export default function DashboardPage() {
           </div>
           <div className="surface-card p-5">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Datasets")}</div>
-            <div className="mt-2 text-4xl font-bold text-[var(--text-primary)]">{totals.datasets.toLocaleString()}</div>
+            <div className="mt-2 text-4xl font-bold text-[var(--text-primary)]">{formatNumberForLanguage(totals.datasets, i18n.language)}</div>
           </div>
         </div>
       </section>
 
       <section>
-        <div className="mb-5 flex items-end justify-between gap-4">
+        <div className="mb-5 flex items-end justify-between gap-4 rounded-3xl border-2 border-black bg-white dark:border-white dark:bg-white p-6">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--brand-secondary)]">{t("Explore Domains")}</div>
             <h2 className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{t("Sector overview")}</h2>

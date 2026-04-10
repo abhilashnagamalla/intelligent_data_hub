@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build artifacts and logs
+build_output.txt
+
+# Local project notes
+TODO.md

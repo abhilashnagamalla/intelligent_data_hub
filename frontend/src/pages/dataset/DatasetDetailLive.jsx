@@ -9,19 +9,14 @@ import DatasetVisualizer from '../../components/dataset/DatasetVisualizerDynamic
 import { getSectorBackground } from '../../constants/backgrounds';
 import useEngagement from '../../hooks/useEngagement';
 
-const PAGE_SIZE = 500;
-const VISUALIZATION_ROW_LIMIT = 50;
+const PAGE_SIZE = 150;
+const VISUALIZATION_ROW_LIMIT = 100;
+const MAX_COLUMN_SCAN_ROWS = 250;
 
-function largeDatasetVisualization(totalRows) {
-  return {
-    visualization: {
-      message: 'Data is too large to visualize immediately.',
-      charts: [],
-      rowCount: Number(totalRows || 0),
-      threshold: VISUALIZATION_ROW_LIMIT,
-    },
-    insights: [],
-  };
+function isNumericLike(value) {
+  if (value === null || value === undefined || value === '') return false;
+  const parsed = Number(String(value).replace(/,/g, '').trim());
+  return Number.isFinite(parsed);
 }
 
 function apiErrorMessage(error, fallback) {
@@ -81,7 +76,7 @@ function Pagination({ page, totalPages, onPageChange, disabled }) {
 
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
-      <div className="text-sm text-gray-500 dark:text-gray-400">{t('Page')} {page} {t('of')} {totalPages} • 500 {t('Rows per page')}</div>
+      <div className="rounded-lg border border-black bg-white px-4 py-2 text-sm font-medium text-black">{t('Page')} {page} {t('of')} {totalPages} • {PAGE_SIZE} {t('Rows per page')}</div>
       <div className="flex items-center gap-1">
         <button onClick={() => onPageChange(1)} disabled={page === 1 || disabled} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title={t('First page')}>
           <ChevronsLeft className="w-4 h-4" />
@@ -139,6 +134,9 @@ export default function DatasetDetailLive() {
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState('');
   const [vizState, setVizState] = useState({ loading: false, data: null, error: '' });
+  const [vizColumns, setVizColumns] = useState({ category: '', numeric: '' });
+  const [customVizEnabled, setCustomVizEnabled] = useState(false);
+  const [vizRefreshTick, setVizRefreshTick] = useState(0);
   const [downloading, setDownloading] = useState(false);
   const [rawCopied, setRawCopied] = useState(false);
 
@@ -158,7 +156,6 @@ export default function DatasetDetailLive() {
         setDataset(response.data?.dataset || null);
         setSector(response.data?.sector || response.data?.dataset?.sectorKey || '');
       } catch (loadError) {
-        console.error(loadError);
         if (!cancelled) setError(apiErrorMessage(loadError, 'Dataset not found.'));
       } finally {
         if (!cancelled) setLoading(false);
@@ -196,10 +193,10 @@ export default function DatasetDetailLive() {
             }
           } catch (_e) { /* ignore localStorage errors */ }
         }
-      } catch (statsError) {
-        console.error(statsError);
+      } catch (_statsError) {
+        // Non-blocking stats failure.
       }
-    }, 600); // 600ms delay to stagger behind the data page request
+    }, 120);
 
     return () => {
       cancelled = true;
@@ -208,8 +205,31 @@ export default function DatasetDetailLive() {
   }, [dataset, sector, trackView]);
 
   useEffect(() => {
+    if (!dataset?.id || !sector) return undefined;
+
+    let cancelled = false;
+    const pollStats = async () => {
+      try {
+        const response = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}/stats`);
+        const nextStats = response.data?.stats;
+        if (!cancelled && nextStats) {
+          setStats((current) => ({ ...(current || {}), ...nextStats }));
+        }
+      } catch {
+        // Keep current UI state on transient poll failures.
+      }
+    };
+
+    const intervalId = window.setInterval(pollStats, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [dataset?.id, sector]);
+
+  useEffect(() => {
     if (!dataset) return;
-    if (activeView !== 'table' && activeView !== 'raw') return;
+    if (activeView !== 'table' && activeView !== 'raw' && activeView !== 'viz') return;
 
     let cancelled = false;
     async function loadPage() {
@@ -228,7 +248,6 @@ export default function DatasetDetailLive() {
           });
         }
       } catch (loadError) {
-        console.error(loadError);
         if (!cancelled) setPageError(apiErrorMessage(loadError, 'Failed to load dataset page.'));
       } finally {
         if (!cancelled) setPageLoading(false);
@@ -250,27 +269,93 @@ export default function DatasetDetailLive() {
 
   useEffect(() => {
     setVizState({ loading: false, data: null, error: '' });
+    setVizColumns({ category: '', numeric: '' });
+    setCustomVizEnabled(false);
   }, [dataset?.id]);
+
+  const totalRows = Number(stats?.rows || dataset?.numberOfRows || dataset?.rows || 0);
+  const isSampleOnlyMode = totalRows > VISUALIZATION_ROW_LIMIT;
+
+  const { categoryColumns, numericColumns } = useMemo(() => {
+    const columns = pageData.columns || [];
+    const records = (pageData.records || []).slice(0, MAX_COLUMN_SCAN_ROWS);
+    if (!columns.length || !records.length) {
+      return { categoryColumns: [], numericColumns: [] };
+    }
+
+    const numeric = [];
+    const categorical = [];
+
+    for (const column of columns) {
+      let nonEmpty = 0;
+      let numericLikeCount = 0;
+
+      for (const record of records) {
+        const value = record?.[column];
+        if (value === null || value === undefined || value === '') continue;
+        nonEmpty += 1;
+        if (isNumericLike(value)) numericLikeCount += 1;
+      }
+
+      if (nonEmpty === 0) continue;
+      if (numericLikeCount / nonEmpty >= 0.75) {
+        numeric.push(column);
+      } else {
+        categorical.push(column);
+      }
+    }
+
+    return { categoryColumns: categorical, numericColumns: numeric };
+  }, [pageData.columns, pageData.records]);
+
+  useEffect(() => {
+    if (activeView !== 'viz' || isSampleOnlyMode) return;
+    if (!categoryColumns.length || !numericColumns.length) return;
+
+    setVizColumns((current) => ({
+      category: current.category && categoryColumns.includes(current.category) ? current.category : categoryColumns[0],
+      numeric: current.numeric && numericColumns.includes(current.numeric) ? current.numeric : numericColumns[0],
+    }));
+  }, [activeView, categoryColumns, numericColumns, isSampleOnlyMode]);
+
+  useEffect(() => {
+    if (isSampleOnlyMode) {
+      setCustomVizEnabled(false);
+    }
+  }, [isSampleOnlyMode]);
 
   useEffect(() => {
     if (!dataset || activeView !== 'viz') return;
 
-    const totalRows = Number(stats?.rows || dataset.numberOfRows || dataset.rows || 0);
-    if (totalRows > VISUALIZATION_ROW_LIMIT) {
-      setVizState({ loading: false, data: largeDatasetVisualization(totalRows), error: '' });
-      return;
-    }
-
-    if (!sector || vizState.data || vizState.loading) return;
+    if (!sector) return;
 
     let cancelled = false;
     async function loadVisualization() {
       setVizState({ loading: true, data: null, error: '' });
       try {
-        const response = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}`);
-        if (!cancelled) setVizState({ loading: false, data: response.data, error: '' });
+        let response;
+        if (!isSampleOnlyMode && customVizEnabled && vizColumns.category && vizColumns.numeric) {
+          response = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}/visualize`, {
+            params: {
+              category_column: vizColumns.category,
+              numeric_column: vizColumns.numeric,
+            },
+          });
+        } else {
+          response = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}`);
+        }
+
+        const payload = response.data;
+        const firstChart = payload?.visualization?.charts?.[0];
+        if (!isSampleOnlyMode && customVizEnabled && firstChart) {
+          firstChart.type = 'histogram';
+          firstChart.title = `${vizColumns.category} vs ${vizColumns.numeric}`;
+          firstChart.xLabel = vizColumns.category;
+          firstChart.yLabel = vizColumns.numeric;
+        }
+
+        if (!cancelled) setVizState({ loading: false, data: payload, error: '' });
       } catch (loadError) {
-        console.error(loadError);
         if (!cancelled) setVizState({ loading: false, data: null, error: apiErrorMessage(loadError, 'Failed to generate visualization.') });
       }
     }
@@ -279,7 +364,7 @@ export default function DatasetDetailLive() {
     return () => {
       cancelled = true;
     };
-  }, [dataset, sector, activeView, stats?.rows, vizState.data, vizState.loading]);
+  }, [dataset, sector, activeView, isSampleOnlyMode, customVizEnabled, vizColumns.category, vizColumns.numeric, vizRefreshTick]);
 
   const csvPreview = useMemo(() => formatCsv(pageData.records, pageData.columns), [pageData]);
   const rawPreviewText = csvPreview || 'No data available.';
@@ -303,7 +388,7 @@ export default function DatasetDetailLive() {
       setRawCopied(true);
       window.setTimeout(() => setRawCopied(false), 1800);
     } catch (copyError) {
-      console.error(copyError);
+      // Clipboard fallback already attempted.
     }
   };
 
@@ -336,7 +421,7 @@ export default function DatasetDetailLive() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
     } catch (downloadError) {
-      console.error(downloadError);
+      setPageError(apiErrorMessage(downloadError, 'Failed to download CSV. Please try again.'));
     } finally {
       setDownloading(false);
     }
@@ -350,7 +435,7 @@ export default function DatasetDetailLive() {
         imageSrc={detailBackground}
         innerClassName="flex min-h-[calc(100vh-9rem)] items-center justify-center"
       >
-        <div className="text-gray-600 dark:text-gray-300">{t('Loading dataset...')}</div>
+        <div className="rounded-2xl border-2 border-black bg-white p-6" style={{ color: '#0F172A' }}>{t('Loading dataset...')}</div>
       </DetailPageBackground>
     );
   }
@@ -483,6 +568,68 @@ export default function DatasetDetailLive() {
 
           {activeView === 'viz' && (
             <>
+              {isSampleOnlyMode ? (
+                <div className="rounded-2xl border-2 border-amber-500 bg-amber-50 p-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                  <div className="text-sm font-semibold">
+                    {t('This dataset exceeds 100 rows. A sampled histogram will be generated automatically from the first 100 rows.')}
+                  </div>
+                  <div className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                    {t('Custom column selection is disabled for larger datasets to keep visualization generation fast and consistent.')}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setVizRefreshTick((current) => current + 1)}
+                    className="mt-4 rounded-lg border-2 border-amber-700 bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-500"
+                  >
+                    {t('Generate Histogram')}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-3 rounded-2xl border-2 border-black bg-white p-4 dark:bg-gray-950 sm:grid-cols-3">
+                  <label className="space-y-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Categorical (X)</div>
+                    <select
+                      value={vizColumns.category}
+                      onChange={(event) => {
+                        setCustomVizEnabled(true);
+                        setVizColumns((current) => ({ ...current, category: event.target.value }));
+                      }}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-black dark:text-white"
+                    >
+                      {categoryColumns.map((column) => (
+                        <option key={column} value={column}>{column}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="space-y-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Numeric (Y)</div>
+                    <select
+                      value={vizColumns.numeric}
+                      onChange={(event) => {
+                        setCustomVizEnabled(true);
+                        setVizColumns((current) => ({ ...current, numeric: event.target.value }));
+                      }}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-black dark:text-white"
+                    >
+                      {numericColumns.map((column) => (
+                        <option key={column} value={column}>{column}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => setCustomVizEnabled(true)}
+                      disabled={!vizColumns.category || !vizColumns.numeric || vizState.loading}
+                      className="w-full rounded-lg border-2 border-black bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      Generate Histogram ({vizColumns.category || 'X'} vs {vizColumns.numeric || 'Y'})
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {vizState.loading && <div className="text-gray-500">{t('Generating visualization...')}</div>}
               {vizState.error && <div className="text-red-500">{vizState.error}</div>}
               {!vizState.loading && !vizState.error && (

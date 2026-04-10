@@ -62,6 +62,8 @@ export default function DatasetVisualizerDynamic({ visualization, insights = [] 
   }
 
   const rotateLabels = !chart.labelMapping?.length && chart.data?.some((item) => String(item.displayLabel || '').length > 12);
+  const xAxisHeight = rotateLabels ? 84 : 54;
+  const chartBottomMargin = rotateLabels ? 56 : 40;
 
   return (
     <div className="space-y-6">
@@ -74,15 +76,16 @@ export default function DatasetVisualizerDynamic({ visualization, insights = [] 
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 h-[420px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chart.data} margin={{ top: 12, right: 24, left: 8, bottom: 24 }}>
+          <BarChart data={chart.data} margin={{ top: 12, right: 24, left: 8, bottom: chartBottomMargin }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
             <XAxis
               dataKey={chart.xKey}
               interval={0}
               angle={rotateLabels ? -20 : 0}
               textAnchor={rotateLabels ? 'end' : 'middle'}
-              height={rotateLabels ? 70 : 40}
-              label={{ value: chart.xLabel, position: 'insideBottom', offset: -8 }}
+              height={xAxisHeight}
+              tickMargin={10}
+              label={{ value: chart.xLabel, position: 'bottom', offset: 14 }}
             />
             <YAxis
               tickFormatter={formatMetricValue}

@@ -2,11 +2,11 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 import requests
 
-
 from app.services.dataset_catalog import (
     DETAIL_PAGE_SIZE,
     MAX_DYNAMIC_VISUALIZATION_ROWS,
     MAX_VISUALIZATION_ROWS,
+    build_sampled_visualization,
     create_custom_visualization,
     dataset_insights,
     enrich_dataset,
@@ -15,17 +15,16 @@ from app.services.dataset_catalog import (
     get_all_datasets,
     get_catalog_dataset,
     get_dataset_by_id,
-    get_sector_datasets,
     get_dataset_stats,
+    get_sector_datasets,
     get_visualization_cache,
     increment_tracker,
     infer_visualization,
-    search_datasets,
     safe_int,
+    search_datasets,
     set_visualization_cache,
     start_summary_refresh,
     stream_dataset_csv,
-    summary_file_for_sector,
     too_large_visualization_payload,
 )
 
@@ -165,18 +164,6 @@ def dataset_analysis(sector: str, dataset_id: str):
 
         enriched = enrich_dataset(dataset, include_remote_metadata=True)
         stats = get_dataset_stats(sector, dataset_id)
-        total_rows = safe_int(stats.get("rows") or enriched.get("numberOfRows"))
-
-        if total_rows and total_rows > MAX_DYNAMIC_VISUALIZATION_ROWS:
-            visualization = too_large_visualization_payload(total_rows)
-            set_visualization_cache(dataset_id, visualization)
-            return {
-                "dataset": enriched,
-                "stats": stats,
-                "visualization": visualization,
-                "insights": [],
-            }
-
         cached_viz = get_visualization_cache(dataset_id)
         if cached_viz is not None:
             return {
@@ -186,23 +173,36 @@ def dataset_analysis(sector: str, dataset_id: str):
                 "insights": [],
             }
 
-        full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_DYNAMIC_VISUALIZATION_ROWS)
+        total_rows = safe_int(stats.get("rows") or enriched.get("numberOfRows"))
+        if total_rows > MAX_DYNAMIC_VISUALIZATION_ROWS:
+            sample_page = fetch_dataset_page(dataset_id, limit=MAX_DYNAMIC_VISUALIZATION_ROWS, offset=0)
+            records = sample_page.get("records", [])
+            columns = sample_page.get("columns", [])
+            visualization = build_sampled_visualization(
+                records,
+                columns,
+                total_rows=total_rows,
+                sampled_rows=len(records),
+            )
+            insights = dataset_insights(records, columns, total_rows=total_rows, sampled=True)
+        else:
+            full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_VISUALIZATION_ROWS)
+
+            records = full_dataset.get("records", [])
+            columns = full_dataset.get("columns", [])
+            if full_dataset.get("tooLarge"):
+                visualization = too_large_visualization_payload(stats.get("rows") or full_dataset.get("totalRows"))
+                insights = []
+            elif not records:
+                visualization = {"message": "No visualization available for this dataset.", "charts": []}
+                insights = []
+            else:
+                visualization = infer_visualization(records, columns, total_rows=stats.get("rows"))
+                insights = dataset_insights(records, columns, total_rows=stats.get("rows"))
     except requests.RequestException as exc:
         if "429" in str(exc):
             raise HTTPException(status_code=429, detail="data.gov.in rate limit reached. Please retry shortly.") from exc
         raise HTTPException(status_code=502, detail="Failed to fetch dataset metadata") from exc
-
-    records = full_dataset.get("records", [])
-    columns = full_dataset.get("columns", [])
-    if full_dataset.get("tooLarge"):
-        visualization = too_large_visualization_payload(stats.get("rows") or full_dataset.get("totalRows"))
-        insights = []
-    elif not records:
-        visualization = {"message": "No visualization available for this dataset.", "charts": []}
-        insights = []
-    else:
-        visualization = infer_visualization(records, columns, total_rows=stats.get("rows"))
-        insights = dataset_insights(records, columns, total_rows=stats.get("rows"))
 
     # Cache the visualization for future requests
     set_visualization_cache(dataset_id, visualization)
@@ -279,7 +279,7 @@ def dataset_custom_visualization(
     - GET /datasets/health/my-dataset/visualize?category_column=Name+of+the+Bank&numeric_column=Total+No.+of+ATMs
     
     Constraints:
-    - Dataset must have 50 rows or fewer
+    - Dataset must have 100 rows or fewer
     - Category column must contain string/categorical values
     - Numeric column must contain numeric values
     """
@@ -294,21 +294,11 @@ def dataset_custom_visualization(
 
         stats = get_dataset_stats(sector, dataset_id)
         total_rows = safe_int(stats.get("rows"))
-        if total_rows and total_rows > MAX_DYNAMIC_VISUALIZATION_ROWS:
-            return {
-                "dataset": dataset,
-                "visualization": too_large_visualization_payload(total_rows),
-                "stats": {
-                    "totalRows": total_rows,
-                    "columns": stats.get("columns", []),
-                },
-            }
-
         full_dataset = fetch_full_dataset(dataset_id, max_rows=MAX_DYNAMIC_VISUALIZATION_ROWS)
-        
+
         records = full_dataset.get("records", [])
         columns = full_dataset.get("columns", [])
-        if full_dataset.get("tooLarge"):
+        if full_dataset.get("tooLarge") or (total_rows and total_rows > MAX_DYNAMIC_VISUALIZATION_ROWS):
             return {
                 "dataset": dataset,
                 "visualization": too_large_visualization_payload(total_rows or full_dataset.get("totalRows")),
@@ -317,7 +307,7 @@ def dataset_custom_visualization(
                     "columns": stats.get("columns", []),
                 },
             }
-        
+
         visualization = create_custom_visualization(
             records,
             columns,

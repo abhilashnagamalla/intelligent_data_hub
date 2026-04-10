@@ -375,7 +375,7 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
                 onChange={handleDatasetQueryChange}
                 onFocus={() => ensureActiveChat()}
                 placeholder={`Search ${sectorTitle.toLowerCase()} datasets`}
-                className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
             </div>
 
@@ -477,7 +477,7 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
               }}
               placeholder={selectedDataset ? 'Ask about the selected dataset' : 'Select a dataset to begin'}
               rows={2}
-              className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 pl-4 pr-16 py-4 resize-none"
+              className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 pl-4 pr-16 py-4 resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
             <button onClick={sendMessage} disabled={isLoading || !input.trim() || !selectedDataset} className="absolute right-3 bottom-3 p-3 rounded-xl bg-black text-white disabled:opacity-50">
               <Send className="w-5 h-5" />

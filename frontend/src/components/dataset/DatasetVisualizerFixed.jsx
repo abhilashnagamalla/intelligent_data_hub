@@ -248,6 +248,9 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
 
   const hasLabelMapping = chart.labelMapping?.length > 0;
   const hasGrouped = chart.groupedCategories?.length > 0;
+  const rotateXAxis = chart.data.length > 6;
+  const xAxisHeight = rotateXAxis ? 84 : 54;
+  const chartBottomMargin = rotateXAxis ? 56 : 40;
 
   return (
     <div className="space-y-4">
@@ -273,10 +276,10 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
       <div className="surface-card h-[420px] p-4">
         <ResponsiveContainer width="100%" height="100%">
           {chart.type === "line" ? (
-            <AreaChart data={chart.data}>
+            <AreaChart data={chart.data} margin={{ top: 12, right: 16, left: 4, bottom: chartBottomMargin }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
-              <XAxis dataKey={chart.xKey} tick={{ fontSize: 12 }}>
-                {chart.xLabel && <Label value={chart.xLabel} position="insideBottom" offset={-5} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />}
+              <XAxis dataKey={chart.xKey} tick={{ fontSize: 12 }} tickMargin={10} height={xAxisHeight}>
+                {chart.xLabel && <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />}
               </XAxis>
               <YAxis tick={{ fontSize: 12 }}>
                 {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--text-secondary)", textAnchor: "middle" }} />}
@@ -291,17 +294,18 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
               />
             </AreaChart>
           ) : chart.type === "histogram" ? (
-            <BarChart data={chart.data}>
+            <BarChart data={chart.data} margin={{ top: 12, right: 16, left: 4, bottom: chartBottomMargin }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
               <XAxis
                 dataKey={chart.xKey}
                 interval={0}
-                angle={chart.data.length > 6 ? -25 : 0}
-                textAnchor={chart.data.length > 6 ? "end" : "middle"}
-                height={chart.data.length > 6 ? 70 : 40}
+                angle={rotateXAxis ? -25 : 0}
+                textAnchor={rotateXAxis ? "end" : "middle"}
+                height={xAxisHeight}
                 tick={{ fontSize: 11 }}
+                tickMargin={10}
               >
-                {chart.xLabel && <Label value={chart.xLabel} position="insideBottom" offset={-5} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />}
+                {chart.xLabel && <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />}
               </XAxis>
               <YAxis tick={{ fontSize: 12 }}>
                 {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--text-secondary)", textAnchor: "middle" }} />}
@@ -311,18 +315,19 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
             </BarChart>
           ) : (
             /* Bar chart — default */
-            <BarChart data={chart.data}>
+            <BarChart data={chart.data} margin={{ top: 12, right: 16, left: 4, bottom: chartBottomMargin }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
               <XAxis
                 dataKey={chart.xKey}
                 interval={0}
-                angle={chart.data.length > 6 ? -25 : 0}
-                textAnchor={chart.data.length > 6 ? "end" : "middle"}
-                height={chart.data.length > 6 ? 80 : 40}
+                angle={rotateXAxis ? -25 : 0}
+                textAnchor={rotateXAxis ? "end" : "middle"}
+                height={xAxisHeight}
                 tick={{ fontSize: 11 }}
+                tickMargin={10}
               >
                 {chart.xLabel && !hasLabelMapping && (
-                  <Label value={chart.xLabel} position="insideBottom" offset={-5} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />
+                  <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />
                 )}
               </XAxis>
               <YAxis tick={{ fontSize: 12 }}>

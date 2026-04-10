@@ -27,6 +27,15 @@ const domainIcons = {
   census: FileBarChart,
 };
 
+const sectorColors = {
+  agriculture: { light: '#10b981', dark: '#34d399', name: 'emerald' },
+  health: { light: '#ef4444', dark: '#f87171', name: 'red' },
+  education: { light: '#3b82f6', dark: '#60a5fa', name: 'blue' },
+  transport: { light: '#f97316', dark: '#fb923c', name: 'orange' },
+  census: { light: '#a855f7', dark: '#d8b4fe', name: 'purple' },
+  finance: { light: '#14b8a6', dark: '#2dd4bf', name: 'teal' },
+};
+
 const defaultDomains = [
   { sector: 'agriculture', datasets: null },
   { sector: 'census', datasets: null },
@@ -39,9 +48,17 @@ const defaultDomains = [
 export default function Sidebar({ open, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('idh-sidebar-collapsed') === '1';
+  });
   const [domains, setDomains] = useState(defaultDomains);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('idh-sidebar-collapsed', collapsed ? '1' : '0');
+  }, [collapsed]);
 
   useEffect(() => {
     api.get('/domains')
@@ -58,7 +75,9 @@ export default function Sidebar({ open, onClose }) {
 
   const handleNav = (path) => {
     navigate(path);
-    onClose?.(); // close drawer on mobile after navigation
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      onClose?.();
+    }
   };
 
   // Desktop: sidebar is always in-flow; mobile: fixed drawer
@@ -127,7 +146,7 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
         )}
         {!collapsed && (
           <div>
-            <h2 className="text-xl sm:text-2xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h2 className="text-xl sm:text-2xl font-black text-white">
               IDH
             </h2>
             <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
@@ -160,17 +179,30 @@ function SidebarContent({ collapsed, setCollapsed, domains, isActive, handleNav,
           <div className="overflow-hidden rounded-2xl border-2 border-black bg-white/5">
             {domains.map((domain, index) => {
               const Icon = domainIcons[domain.sector.toLowerCase()] || LayoutDashboard;
+              const sectorColor = sectorColors[domain.sector.toLowerCase()];
+              const isActiveDomain = isActive(`/domain/${domain.sector}`);
+              
               return (
                 <button
                   key={domain.sector}
                   onClick={() => handleNav(`/domain/${domain.sector}`)}
-                  className={`w-full flex items-center gap-3 p-3 transition-all group hover:bg-white/10 ${
+                  style={isActiveDomain ? { borderLeftColor: sectorColor.light, borderLeftWidth: '4px' } : {}}
+                  className={`w-full flex items-center gap-3 p-3 transition-all group relative ${
                     index !== domains.length - 1 ? 'border-b border-white/20' : ''
                   } ${
-                    isActive(`/domain/${domain.sector}`) ? 'bg-primary/20 font-medium' : ''
+                    isActiveDomain 
+                      ? 'bg-white/15 font-medium shadow-md' 
+                      : 'bg-white/5 hover:bg-white/10'
                   }`}
                 >
-                  <Icon className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 opacity-80 group-hover:opacity-100" />
+                  {/* Sector indicator dot */}
+                  {isActiveDomain && (
+                    <div 
+                      className="absolute left-1 w-2 h-2 rounded-full"
+                      style={{ backgroundColor: sectorColor.light }}
+                    />
+                  )}
+                  <Icon className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 opacity-80 group-hover:opacity-100" style={isActiveDomain ? { color: sectorColor.light } : {}} />
                   {!collapsed && (
                     <span className="truncate text-sm sm:text-base">
                       {t(formatSectorLabel(domain.sector))}

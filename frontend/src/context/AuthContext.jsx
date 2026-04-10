@@ -11,6 +11,11 @@ import api from '../api';
 /* eslint-disable react-refresh/only-export-components */
 export const AuthContext = createContext();
 
+function emitAuthChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event('idh-auth-changed'));
+}
+
 export default function AuthProvider({ children }) {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -38,13 +43,16 @@ export default function AuthProvider({ children }) {
         };
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
+        emitAuthChanged();
         setError(null);
       } else if (storedUser) {
         // If we have a user stored from backend JWT login, keep it and avoid clearing
         setUser(JSON.parse(storedUser));
+        emitAuthChanged();
       } else {
         localStorage.removeItem('user');
         setUser(null);
+        emitAuthChanged();
       }
       setLoading(false);
     });
@@ -90,6 +98,7 @@ export default function AuthProvider({ children }) {
       };
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
+      emitAuthChanged();
     } catch (error) {
       let message = 'Login failed. Please try again.';
       if (error.response && error.response.data && error.response.data.detail) {
@@ -120,6 +129,7 @@ export default function AuthProvider({ children }) {
       };
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
+      emitAuthChanged();
     } catch (error) {
       let message = 'Registration failed. Please try again.';
       if (error.response && error.response.data && error.response.data.detail) {
@@ -184,6 +194,7 @@ export default function AuthProvider({ children }) {
 
     localStorage.removeItem('user');
     setUser(null);
+    emitAuthChanged();
     navigate('/');
   };
 

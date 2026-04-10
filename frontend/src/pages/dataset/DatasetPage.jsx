@@ -45,7 +45,7 @@ function Pagination({ page, totalPages, onPageChange }) {
 
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
-      <div className="text-sm text-gray-500">Page {page} of {totalPages}</div>
+      <div className="rounded-lg border border-black bg-white px-4 py-2 text-sm font-medium text-black">Page {page} of {totalPages}</div>
       <div className="flex items-center gap-1">
         <button onClick={() => onPageChange(1)} disabled={page === 1} className={`${btnBase} border border-gray-200 dark:border-gray-800`} title="First">
           <ChevronsLeft className="w-4 h-4" />
@@ -206,7 +206,7 @@ export default function DatasetPage() {
             }
           }}
           placeholder={t('Search datasets by title, description, organization, or resource ID')}
-          className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-white"
+          className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
         />
         {(searchQuery || activeSearch) && (
           <button
@@ -222,7 +222,7 @@ export default function DatasetPage() {
       </div>
 
       {warning && <div className="rounded-2xl border border-amber-300 bg-amber-50 text-amber-800 px-4 py-3 text-sm">{warning}</div>}
-      {loading && <div className="text-gray-500">{t('Loading datasets...')}</div>}
+      {loading && <div className="rounded-2xl border-2 border-black bg-white px-6 py-3 inline-block" style={{ color: '#0F172A' }}>{t('Loading datasets...')}</div>}
       {error && <div className="text-red-500">{error}</div>}
 
       {!loading && !error && visibleDatasets.length === 0 && (

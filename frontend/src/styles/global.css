@@ -1,6 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base; /* stylelint-disable-line */
+@tailwind components; /* stylelint-disable-line */
+@tailwind utilities; /* stylelint-disable-line */
+/* stylelint-enable at-rule-no-unknown */
 
 @layer base {
   :root {
@@ -40,16 +42,17 @@
 }
 
 @layer components {
+  /* stylelint-disable at-rule-no-unknown */
   .surface-panel {
-    @apply rounded-3xl border-2 border-black bg-white shadow-sm dark:bg-gray-950;
+    @apply rounded-3xl border-2 border-black bg-white shadow-sm dark:border-white dark:bg-gray-950;
   }
 
   .surface-card {
-    @apply rounded-3xl border-2 border-black bg-white shadow-sm dark:bg-gray-950;
+    @apply rounded-3xl border-2 border-black bg-white shadow-sm dark:border-white dark:bg-gray-950;
   }
 
   .surface-muted {
-    @apply rounded-2xl border-2 border-black bg-gray-50 dark:bg-gray-900;
+    @apply rounded-2xl border-2 border-black bg-gray-50 dark:border-white dark:bg-gray-900;
   }
 
   .btn-primary {
@@ -64,6 +67,11 @@
     @apply inline-flex items-center rounded-full border-2 border-black px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em];
   }
 
+  .input-control {
+    @apply w-full rounded-2xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400;
+  }
+  /* stylelint-enable at-rule-no-unknown */
+
   .text-muted {
     color: var(--text-secondary);
   }
@@ -72,12 +80,15 @@
 @layer utilities {
   .glass {
     background: rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border: 2px solid #000;
   }
 
   .dark .glass {
     background: rgba(30, 41, 59, 0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     border: 2px solid var(--border-strong);
   }
 

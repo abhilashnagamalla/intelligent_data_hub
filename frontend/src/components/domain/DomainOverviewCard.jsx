@@ -9,6 +9,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { formatNumberForLanguage } from '../../utils/dataFormatting';
 import { formatSectorLabel } from "../../constants/sectors";
 
 const iconMap = {
@@ -21,7 +22,7 @@ const iconMap = {
 };
 
 export default function DomainOverviewCard({ domain, onClick }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const Icon = iconMap[domain.sector] || Database;
 
   return (
@@ -44,13 +45,12 @@ className="surface-card border-2 border-black flex h-full w-full flex-col p-6 te
       </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <div className="surface-muted p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Catalog Pages")}</div>
-          <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{domain.catalogs || 0}</div>
-        </div>
-        <div className="surface-muted p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Datasets")}</div>
-          <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{(domain.datasets || 0).toLocaleString()}</div>
+          <div className="surface-muted p-4 dark:border-white">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted dark:text-[var(--text-primary)]">{t("Catalog Pages")}</div>
+            <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{domain.catalogs || 0}</div>
+          </div>
+          <div className="surface-muted p-4 dark:border-white">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted dark:text-[var(--text-primary)]">{t("Datasets")}</div>
         </div>
       </div>
 

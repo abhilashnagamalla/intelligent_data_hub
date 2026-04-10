@@ -51,7 +51,7 @@ export default function Profile() {
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto space-y-8">
       {/* Page Title */}
-      <div>
+      <div className="rounded-3xl border-2 border-black bg-white/92 p-6 dark:bg-gray-950/92">
         <h1 className="text-3xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
           {t('My Profile')}
         </h1>
@@ -59,7 +59,7 @@ export default function Profile() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800 rounded-t-3xl border-2 border-black bg-white/92 p-4 dark:bg-gray-950/92">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (

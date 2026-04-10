@@ -117,7 +117,7 @@ export default function DatasetCatalogPage() {
       </section>
 
       {loading ? (
-        <div className="text-muted">{t("Loading datasets...")}</div>
+        <div className="rounded-2xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-6 py-3 inline-block" style={{ color: '#0F172A' }}>{t("Loading datasets...")}</div>
       ) : datasets.length === 0 ? (
         <div className="surface-card p-8 text-center text-muted">{t("No datasets found.")}</div>
       ) : (

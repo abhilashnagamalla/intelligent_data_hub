@@ -34,6 +34,7 @@ from .dataset_catalog import (
     sector_catalog_datasets,
     sector_keys,
     unique_query_terms,
+    SECTOR_ALIASES,
 )
 
 TOP_K_RESULTS = 10
@@ -544,6 +545,358 @@ def listing_fallback_summary(query: str, matches: list[dict[str, Any]], keywords
     )
 
 
+# ============================================================================
+# DOMAIN RESTRICTION AND QUERY CLASSIFICATION SYSTEM
+# ============================================================================
+
+# Category A: General Platform Questions
+GENERAL_PLATFORM_KEYWORDS = {
+    "intelligent data hub",
+    "platform",
+    "idh",
+    "kind of data",
+    "what data",
+    "available data",
+    "what kind of data",
+    "how to use",
+    "use platform",
+    "how can i use",
+    "real-time",
+    "static",
+    "data coming from",
+    "where data from",
+    "where is data from",
+    "free to use",
+    "free",
+    "cost",
+    "paid",
+    "reliable",
+    "reliability",
+    "data quality",
+    "is data reliable",
+}
+
+# Category B: Dataset Discovery Questions
+DATASET_DISCOVERY_KEYWORDS = {
+    "show datasets",
+    "find datasets",
+    "search datasets",
+    "list datasets",
+    "dataset available",
+    "related to",
+    "datasets in",
+    "what datasets",
+    "latest datasets",
+    "recent datasets",
+    "filter datasets",
+    "highest usage",
+    "most downloaded",
+    "popular datasets",
+    "by state",
+    "by year",
+    "agriculture datasets",
+    "healthcare datasets",
+    "transport datasets",
+    "finance datasets",
+    "education datasets",
+    "census datasets",
+    "poll datasets",
+    "survey datasets",
+}
+
+# Category C: Data Understanding Questions
+DATA_UNDERSTANDING_KEYWORDS = {
+    "what does",
+    "represent",
+    "explain dataset",
+    "explain this",
+    "simple terms",
+    "columns",
+    "fields",
+    "attributes",
+    "field mean",
+    "what is the",
+    "source",
+    "last updated",
+    "updated when",
+    "data updated",
+    "schema",
+    "structure",
+    "preview",
+    "sample",
+    "what does this",
+    "dataset details",
+}
+
+# Category D: Data Analysis Keywords
+DATA_ANALYSIS_KEYWORDS = {
+    "trends",
+    "trend",
+    "summary",
+    "summarize",
+    "average",
+    "average value",
+    "maximum",
+    "minimum",
+    "max",
+    "min",
+    "compare",
+    "comparison",
+    "compare data",
+    "top states",
+    "highest",
+    "lowest",
+    "pattern",
+    "anomalies",
+    "anomaly",
+    "analyze",
+    "analysis",
+    "insights",
+    "insight",
+    "statistics",
+    "stats",
+    "relationship",
+    "correlation",
+    "growth",
+    "decline",
+}
+
+# Category E: Sector-Specific Keywords (already have SECTOR_ALIASES and TOPIC_ALIASES)
+
+# Category F: Action-Based Keywords
+ACTION_KEYWORDS = {
+    "download",
+    "export",
+    "csv",
+    "visualize",
+    "visualisation",
+    "visualization",
+    "chart",
+    "graph",
+    "charts",
+    "graphs",
+    "save dataset",
+    "recommend",
+    "similar datasets",
+}
+
+# Category G: Smart Capability Keywords
+CAPABILITY_KEYWORDS = {
+    "suggest datasets",
+    "recommendation",
+    "explain insights",
+    "conclusions",
+    "best dataset for",
+    "simplify",
+    "beginner",
+    "easy",
+}
+
+# Category H: Error/Edge Case Keywords
+ERROR_KEYWORDS = {
+    "can't find",
+    "cannot find",
+    "not found",
+    "incorrect",
+    "wrong",
+    "missing data",
+    "not loading",
+    "api not",
+    "api error",
+    "error",
+    "broken",
+    "not working",
+    "issue",
+    "problem",
+}
+
+# Generic Greetings/Non-Platform Keywords (Should be Rejected)
+GENERIC_GREETINGS = {
+    "hi",
+    "hello",
+    "hey",
+    "how are you",
+    "how are you doing",
+    "how do you do",
+    "what up",
+    "sup",
+    "greetings",
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "good night",
+    "howdy",
+}
+
+# Generic Non-Platform Keywords (Should be Rejected)
+NON_PLATFORM_KEYWORDS = {
+    "tell me a joke",
+    "joke",
+    "weather",
+    "stock",
+    "cryptocurrency",
+    "bitcoin",
+    "sports",
+    "movie",
+    "music",
+    "book",
+    "recipe",
+    "cooking",
+    "love",
+    "relationship",
+    "advice",
+    "news",
+    "politics",
+    "religion",
+}
+
+# Combined keyword sets for quick checking
+ALL_VALID_KEYWORDS = (
+    GENERAL_PLATFORM_KEYWORDS
+    | DATASET_DISCOVERY_KEYWORDS
+    | DATA_UNDERSTANDING_KEYWORDS
+    | DATA_ANALYSIS_KEYWORDS
+    | ACTION_KEYWORDS
+    | CAPABILITY_KEYWORDS
+    | ERROR_KEYWORDS
+)
+
+
+def classify_query_category(query: str) -> str | None:
+    """
+    Classify a query into one of the allowed categories.
+    Returns category name if matched, None otherwise.
+    """
+    normalized = normalize_search_text(query)
+    query_lower = normalized.lower()
+
+    # Check for general platform questions
+    if any(keyword in query_lower for keyword in GENERAL_PLATFORM_KEYWORDS):
+        return "general_platform"
+
+    # Check for dataset discovery
+    if any(keyword in query_lower for keyword in DATASET_DISCOVERY_KEYWORDS):
+        return "dataset_discovery"
+
+    # Check for data understanding
+    if any(keyword in query_lower for keyword in DATA_UNDERSTANDING_KEYWORDS):
+        return "data_understanding"
+
+    # Check for data analysis
+    if any(keyword in query_lower for keyword in DATA_ANALYSIS_KEYWORDS):
+        return "data_analysis"
+
+    # Check for action-based queries
+    if any(keyword in query_lower for keyword in ACTION_KEYWORDS):
+        return "action_based"
+
+    # Check for capability queries
+    if any(keyword in query_lower for keyword in CAPABILITY_KEYWORDS):
+        return "smart_capability"
+
+    # Check for error/edge cases
+    if any(keyword in query_lower for keyword in ERROR_KEYWORDS):
+        return "error_handling"
+
+    # Check if it mentions sectors, states, or data-related keywords
+    if any(alias in query_lower for aliases in SECTOR_ALIASES.values() for alias in aliases):
+        return "sector_specific"
+
+    if any(keyword in query_lower for keyword in {"data", "dataset", "datasets"}):
+        return "data_related"
+
+    return None
+
+
+def is_platform_query(query: str, sector: str | None = None) -> bool:
+    """
+    Determine if a query is platform/dataset related.
+    Returns True if query is about the platform or datasets, False otherwise.
+    """
+    if not query or not isinstance(query, str):
+        return False
+
+    normalized = normalize_search_text(query)
+    query_lower = normalized.lower()
+
+    # EXPLICIT REJECTION: Check for generic greetings first
+    if any(greeting in query_lower for greeting in GENERIC_GREETINGS):
+        # Only reject if it's ONLY greetings or greetings with minimal additional context
+        # e.g., "hi, show agriculture datasets" should still be accepted
+        remaining_query = query_lower
+        for greeting in GENERIC_GREETINGS:
+            remaining_query = remaining_query.replace(greeting, " ").strip()
+        
+        # If nothing meaningful remains, it's a pure greeting - reject it
+        if len(remaining_query) < 5 or remaining_query.count(" ") == 0:
+            return False
+
+    # EXPLICIT REJECTION: Check for non-platform keywords
+    if any(keyword in query_lower for keyword in NON_PLATFORM_KEYWORDS):
+        return False
+
+    # If sector is explicitly provided, it's a platform query
+    if sector:
+        return True
+
+    # Check if query contains any valid platform-related keywords
+    if any(keyword in query_lower for keyword in ALL_VALID_KEYWORDS):
+        return True
+
+    # Check for sector/topic mentions
+    if any(alias in query_lower for aliases in SECTOR_ALIASES.values() for alias in aliases):
+        return True
+
+    # Check for state mentions (states are data-related)
+    states = detect_query_states(query_lower)
+    if states:
+        return True
+
+    # Generic data/dataset mentions are platform queries
+    if any(keyword in query_lower for keyword in {"data", "dataset", "datasets", "table", "row", "column", "india", "state"}):
+        return True
+
+    return False
+
+
+def get_restriction_message() -> str:
+    """Generate a helpful rejection message for non-platform queries."""
+    return (
+        "I'm a **Intelligent Data Hub Assistant** and can only help with dataset-related questions.\n\n"
+        "**I can help you with:**\n"
+        "📊 **Platform Questions**: What is Intelligent Data Hub? What data is available? Is it free?\n"
+        "🔍 **Discover Datasets**: Show datasets related to agriculture, healthcare, finance, etc.\n"
+        "📖 **Understand Data**: Explain dataset columns, sources, when last updated, structure\n"
+        "📈 **Analyze Data**: Find trends, compare values, show top states, identify patterns\n"
+        "💾 **Download & Visualize**: Export as CSV, create charts, visualize data\n"
+        "🎯 **Smart Insights**: Get dataset recommendations or simplified explanations\n\n"
+        "**Example questions:**\n"
+        "• 'Show datasets related to agriculture'\n"
+        "• 'What are the trends in crop production?'\n"
+        "• 'Compare healthcare data between states'\n"
+        "• 'How do I visualize this dataset?'\n\n"
+        "Please ask about datasets or the platform, and I'll assist you!"
+    )
+
+
+def domain_restricted_response(session_id: str, query: str) -> dict[str, Any]:
+    """
+    Return a response when a query is outside the platform domain.
+    """
+    message = get_restriction_message()
+    record_session_message(session_id, "assistant", message)
+    session_state(session_id)["lastMatches"] = []
+    return {
+        "sessionId": session_id,
+        "restricted": True,
+        "content": message,
+        "matches": [],
+        "insights": ["This query is outside the scope of the Intelligent Data Hub platform assistant."],
+        "result": None,
+        "history": _session_history[session_id],
+    }
+
+
 def no_match_response(session_id: str, query: str) -> dict[str, Any]:
     message = f"I couldn't find relevant datasets for '{query}'. Try adding a sector, state, or dataset topic."
     record_session_message(session_id, "assistant", message)
@@ -564,8 +917,6 @@ def listing_response(session_id: str, query: str, matches: list[dict[str, Any]],
     match_payloads = [message_dataset_payload(dataset, rank) for rank, dataset in enumerate(matches, start=1)]
     insights = []
 
-    if keywords:
-        insights.append(f"Matched keywords: {', '.join(keywords)}.")
     if matches:
         sectors = sorted({str(dataset.get('sector') or dataset.get('sectorKey') or '').strip() for dataset in matches if dataset.get("sector") or dataset.get("sectorKey")})
         if sectors:
@@ -1085,6 +1436,13 @@ def chatbot_response(
         return no_match_response(active_session_id, "your request")
 
     record_session_message(active_session_id, "user", normalized_query)
+
+    # ========================================================================
+    # DOMAIN RESTRICTION CHECK: Only allow platform/dataset-related queries
+    # ========================================================================
+    # Allow through if: dataset_id provided, sector provided, or query is platform-related
+    if not (dataset_id or sector or is_platform_query(normalized_query, sector=sector)):
+        return domain_restricted_response(active_session_id, normalized_query)
 
     normalized_sector = normalize_sector_key(sector) if sector and normalize_sector_key(sector) != "all" else None
     target_dataset, _known_matches = resolve_requested_dataset(

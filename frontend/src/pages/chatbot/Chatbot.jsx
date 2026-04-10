@@ -259,7 +259,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
   };
 
   return (
-    <div className="flex h-full min-h-[600px] w-full overflow-hidden bg-white dark:bg-gray-950 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl relative">
+      <div className="flex h-full min-h-[600px] w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-950 relative">
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div initial={{ x: -240, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -240, opacity: 0 }} className="absolute lg:relative z-20 w-72 h-full bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col">
@@ -290,7 +290,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
             <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-900"><Bot className="w-5 h-5" /></div>
             <div>
               <div className="font-bold text-gray-900 dark:text-white">Dataset Chatbot</div>
-              <div className="text-xs text-gray-500">RAG-powered search and live insights for {sectorTitle} datasets</div>
+              <div className="text-xs text-gray-500">AI-powered search and insights for {sectorTitle} datasets</div>
             </div>
           </div>
           {onClose && <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900"><X className="w-5 h-5" /></button>}
@@ -375,7 +375,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
             ))
           )}
           {isLoading && (
-            <div className="flex items-center gap-3 text-gray-500"><Loader2 className="w-5 h-5 animate-spin" /> Generating response...</div>
+            <div className="flex items-center gap-3 rounded-2xl border border-black bg-white/92 p-4 dark:bg-gray-950/92 text-gray-700 dark:text-gray-300"><Loader2 className="w-5 h-5 animate-spin" /> Generating response...</div>
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -393,7 +393,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
               }}
               placeholder="Search datasets or ask for insights from a specific dataset"
               rows={2}
-              className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 pl-4 pr-16 py-4 resize-none"
+              className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 pl-4 pr-16 py-4 resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
             <button onClick={sendMessage} disabled={isLoading || !input.trim()} className="absolute right-3 bottom-3 p-3 rounded-xl bg-black text-white disabled:opacity-50">
               <Send className="w-5 h-5" />
@@ -401,6 +401,6 @@ export default function Chatbot({ onClose, sector: propSector }) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
   );
 }

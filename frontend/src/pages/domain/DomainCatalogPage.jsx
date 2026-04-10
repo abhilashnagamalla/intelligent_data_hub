@@ -6,6 +6,7 @@ import Pagination from "../../components/common/Pagination";
 import DatasetCatalogCard from "../../components/dataset/DatasetCatalogCard";
 import { formatSectorLabel } from "../../constants/sectors";
 import { indianStates, allStatesOption, getStateName } from "../../constants/states";
+import { formatNumberForLanguage } from "../../utils/dataFormatting";
 import { ChevronDown } from "lucide-react";
 
 export default function DomainCatalogPage() {
@@ -74,19 +75,19 @@ export default function DomainCatalogPage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {/* Catalogs Count */}
           <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Catalogs")}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">{t("Catalogs")}</div>
             <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">-</div>
           </div>
 
           {/* Datasets Count */}
           <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Datasets")}</div>
-            <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{stats.datasets.toLocaleString()}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">{t("Datasets")}</div>
+            <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{formatNumberForLanguage(stats.datasets, i18n.language)}</div>
           </div>
 
           {/* Quick Filter Sub Container */}
           <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-4 flex flex-col justify-between">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted block mb-3">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)] block mb-3">
               {t("Quick Filter")}
             </label>
             <div className="relative flex-1 flex items-center">
@@ -111,9 +112,9 @@ export default function DomainCatalogPage() {
       </section>
 
       {loading ? (
-        <div className="text-muted">{t("Loading domain datasets...")}</div>
+        <div className="surface-panel p-6 text-center text-[var(--text-primary)]">{t("Loading domain datasets...")}</div>
       ) : datasets.length === 0 ? (
-        <div className="surface-card p-8 text-center text-muted">
+        <div className="surface-card p-8 text-center text-[var(--text-primary)]">
           {selectedState !== "ALL"
             ? t("No datasets found for the selected state.")
             : t("No datasets found for this sector.")}

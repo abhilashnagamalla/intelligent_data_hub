@@ -626,8 +626,24 @@ const resources = {
   },
 };
 
-const storedLanguage =
-  typeof window !== "undefined" ? window.localStorage.getItem("idh-language") : null;
+function activeLanguageKey() {
+  if (typeof window === "undefined") return "idh-language:guest";
+  try {
+    const raw = window.localStorage.getItem("user");
+    const user = raw ? JSON.parse(raw) : null;
+    const userId = user?.id || user?.email || "guest";
+    return `idh-language:${userId}`;
+  } catch {
+    return "idh-language:guest";
+  }
+}
+
+function readStoredLanguage() {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(activeLanguageKey());
+}
+
+const storedLanguage = readStoredLanguage();
 
 i18n.use(initReactI18next).init({
   resources,
@@ -640,9 +656,18 @@ i18n.use(initReactI18next).init({
 
 i18n.on("languageChanged", (language) => {
   if (typeof window !== "undefined") {
-    window.localStorage.setItem("idh-language", language);
+    window.localStorage.setItem(activeLanguageKey(), language);
     document.documentElement.lang = language;
   }
 });
+
+if (typeof window !== "undefined") {
+  window.addEventListener("idh-auth-changed", () => {
+    const nextLanguage = readStoredLanguage() || "en";
+    if (i18n.language !== nextLanguage) {
+      i18n.changeLanguage(nextLanguage);
+    }
+  });
+}
 
 export default i18n;

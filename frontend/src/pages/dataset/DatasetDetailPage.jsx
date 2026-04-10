@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { BarChart3, Bookmark, Download, Eye, Table2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import api from "../../api";
+import { formatNumberForLanguage } from "../../utils/dataFormatting";
 import Pagination from "../../components/common/Pagination";
 import DatasetMeta from "../../components/dataset/DatasetMeta";
 import DatasetVisualizer from "../../components/dataset/DatasetVisualizerFixed";
@@ -13,19 +14,7 @@ import GeoViewModal from "../../components/dataset/GeoViewModalMap";
 import { Map, Loader2 } from "lucide-react";
 
 const PAGE_SIZE = 250;
-const VISUALIZATION_ROW_LIMIT = 50;
-
-function largeDatasetVisualization(totalRows) {
-  return {
-    visualization: {
-      message: "Data is too large to visualize immediately.",
-      charts: [],
-      rowCount: Number(totalRows || 0),
-      threshold: VISUALIZATION_ROW_LIMIT,
-    },
-    insights: [],
-  };
-}
+const VISUALIZATION_ROW_LIMIT = 100;
 
 function csvPreview(records, columns) {
   if (!records.length || !columns.length) return "";
@@ -36,7 +25,7 @@ export default function DatasetDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const trackedRef = useRef(false);
   const { trackView, trackDownload } = useEngagement();
   const { user, googleLogin } = useContext(AuthContext);
@@ -96,6 +85,29 @@ export default function DatasetDetailPage() {
   }, [dataset, sector, trackView]);
 
   useEffect(() => {
+    if (!dataset?.id || !sector) return undefined;
+
+    let cancelled = false;
+    const pollStats = async () => {
+      try {
+        const response = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}/stats`);
+        const nextStats = response.data?.stats;
+        if (!cancelled && nextStats) {
+          setStats((current) => ({ ...(current || {}), ...nextStats }));
+        }
+      } catch {
+        // Keep the current stats on transient polling failures.
+      }
+    };
+
+    const intervalId = window.setInterval(pollStats, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [dataset?.id, sector]);
+
+  useEffect(() => {
     if (!dataset) return undefined;
 
     let cancelled = false;
@@ -125,12 +137,6 @@ export default function DatasetDetailPage() {
 
   useEffect(() => {
     if (!dataset || activeView !== "viz") return undefined;
-
-    const totalRows = Number(stats?.rows || dataset.numberOfRows || dataset.rows || 0);
-    if (totalRows > VISUALIZATION_ROW_LIMIT) {
-      setVisualization({ loading: false, data: largeDatasetVisualization(totalRows) });
-      return undefined;
-    }
 
     if (!sector) return undefined;
 
@@ -194,7 +200,7 @@ export default function DatasetDetailPage() {
   );
 
   if (loading) {
-    return <div className="text-muted">{t("Loading dataset...")}</div>;
+    return <div className="rounded-2xl border-2 border-black bg-white px-6 py-3 inline-block" style={{ color: '#0F172A' }}>{t("Loading dataset...")}</div>;
   }
 
   if (!dataset) {
@@ -243,19 +249,19 @@ export default function DatasetDetailPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="surface-card p-5">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Rows")}</div>
-          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{(stats?.rows || dataset.numberOfRows || 0).toLocaleString()}</div>
+          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{formatNumberForLanguage(stats?.rows || dataset.numberOfRows || 0, i18n.language)}</div>
         </div>
         <div className="surface-card p-5">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Columns")}</div>
-          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{(stats?.columnCount || dataset.numberOfColumns || 0).toLocaleString()}</div>
+          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{formatNumberForLanguage(stats?.columnCount || dataset.numberOfColumns || 0, i18n.language)}</div>
         </div>
         <div className="surface-card p-5">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Views")}</div>
-          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{(stats?.views || 0).toLocaleString()}</div>
+          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{formatNumberForLanguage(stats?.views || 0, i18n.language)}</div>
         </div>
         <div className="surface-card p-5">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("Downloads")}</div>
-          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{(stats?.downloads || 0).toLocaleString()}</div>
+          <div className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{formatNumberForLanguage(stats?.downloads || 0, i18n.language)}</div>
         </div>
       </section>
 

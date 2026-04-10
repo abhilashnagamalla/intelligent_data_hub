@@ -26,7 +26,7 @@ export default function Pagination({
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-4 ${className}`}>
-      <div className="text-sm text-muted">
+      <div className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-black dark:text-white">
         {t("Page")} {currentPage} {t("of")} {totalPages}
       </div>
       <div className="flex flex-wrap items-center gap-2">

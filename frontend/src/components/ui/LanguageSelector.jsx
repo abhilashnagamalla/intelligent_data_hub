@@ -24,12 +24,12 @@ export default function LanguageSelector() {
       <button className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
         {currentLang.name} ▼
       </button>
-      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
         {languages.map((lang) => (
           <button
             key={lang.code}
             onClick={() => changeLanguage(lang.code)}
-            className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${
+            className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 ${
               t18n.language === lang.code ? 'bg-primary text-white font-medium' : ''
             }`}
           >

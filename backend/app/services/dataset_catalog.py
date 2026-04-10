@@ -28,7 +28,7 @@ LISTS_API_URL = f"{API_BASE_URL}/lists"
 CATALOG_PAGE_SIZE = 9
 DETAIL_PAGE_SIZE = 500
 MAX_VISUALIZATION_ROWS = 10000
-MAX_DYNAMIC_VISUALIZATION_ROWS = 50
+MAX_DYNAMIC_VISUALIZATION_ROWS = 100
 SUMMARY_REFRESH_INTERVAL_SECONDS = 60 * 60 * 6
 RESOURCE_METADATA_TTL_SECONDS = 60 * 60 * 24 * 7
 VISUALIZATION_CACHE_TTL_SECONDS = 60 * 60  # Cache visualization for 1 hour
@@ -592,7 +592,7 @@ def format_metric_value(value: float | int | None) -> str:
 def too_large_visualization_payload(total_rows: int | None) -> dict[str, Any]:
     total = safe_int(total_rows, 0)
     return {
-        "message": "Data is too large to visualize immediately.",
+        "message": "Visualization is available for datasets up to 100 rows. Larger datasets are handled with a sampled histogram.",
         "charts": [],
         "rowCount": total,
         "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
@@ -2130,6 +2130,69 @@ def infer_visualization(records: list[dict[str, Any]], columns: list[str], *, to
     return {"message": "No visualization available for this dataset.", "charts": []}
 
 
+def build_sampled_visualization(
+    records: list[dict[str, Any]],
+    columns: list[str],
+    *,
+    total_rows: int | None = None,
+    sampled_rows: int | None = None,
+) -> dict[str, Any]:
+    resolved_columns = columns or (list(records[0].keys()) if records else [])
+    total = total_rows or len(records)
+
+    if not records or not resolved_columns:
+        return {
+            "message": "No visualization available for this dataset.",
+            "charts": [],
+            "rowCount": total,
+            "sampledRows": sampled_rows or len(records),
+            "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+        }
+
+    numeric = detect_numeric_columns(records, resolved_columns)
+    if not numeric:
+        return {
+            "message": "No numeric columns available for visualization.",
+            "charts": [],
+            "rowCount": total,
+            "sampledRows": sampled_rows or len(records),
+            "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+        }
+
+    primary_numeric = numeric[0]
+    categorical = detect_categorical_columns(records, resolved_columns, numeric)
+    if categorical:
+        bar_chart = build_bar_chart(records, categorical[0], primary_numeric)
+        if bar_chart:
+            return {
+                "message": None,
+                "charts": [bar_chart],
+                "rowCount": total,
+                "sampledRows": sampled_rows or len(records),
+                "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+            }
+
+    numeric_values = [safe_float(record.get(primary_numeric)) for record in records]
+    numeric_values = [value for value in numeric_values if value is not None]
+    histogram_chart = build_histogram_chart(numeric_values, primary_numeric)
+    if histogram_chart:
+        return {
+            "message": None,
+            "charts": [histogram_chart],
+            "rowCount": total,
+            "sampledRows": sampled_rows or len(records),
+            "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+        }
+
+    return {
+        "message": "No visualization available for this dataset.",
+        "charts": [],
+        "rowCount": total,
+        "sampledRows": sampled_rows or len(records),
+        "threshold": MAX_DYNAMIC_VISUALIZATION_ROWS,
+    }
+
+
 def dataset_insights(
     records: list[dict[str, Any]],
     columns: list[str],
@@ -2385,9 +2448,13 @@ def create_custom_visualization(
             "charts": [],
         }
     
-    # Build the bar chart
+    # Build the category-vs-value chart and label it as histogram for UI consistency.
     bar_chart = build_bar_chart(records, category_column, numeric_column)
     if bar_chart:
+        bar_chart["type"] = "histogram"
+        bar_chart["title"] = f"{category_column} vs {numeric_column}"
+        bar_chart["xLabel"] = category_column
+        bar_chart["yLabel"] = numeric_column
         return {
             "message": None,
             "charts": [bar_chart],

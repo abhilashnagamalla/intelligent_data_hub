@@ -125,21 +125,21 @@ export default function DomainPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-3 xl:max-w-5xl">
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/90">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('Catalogs')}</div>
+              <div className="text-xs uppercase tracking-wide text-gray-700 dark:text-gray-400">{t('Catalogs')}</div>
               <div className="text-3xl font-black text-gray-900 dark:text-white">
                 {catalogLoading ? '...' : stats.catalogs.toLocaleString()}
               </div>
             </div>
 
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/90">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('Datasets')}</div>
+              <div className="text-xs uppercase tracking-wide text-gray-700 dark:text-gray-400">{t('Datasets')}</div>
               <div className="text-3xl font-black text-gray-900 dark:text-white">
                 {catalogLoading ? '...' : stats.datasets.toLocaleString()}
               </div>
             </div>
 
             <div className="rounded-2xl border-2 border-black bg-white p-4 dark:bg-gray-900/80">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('Quick Filters')}</div>
+              <div className="text-xs uppercase tracking-wide text-gray-700 dark:text-gray-400">{t('Quick Filters')}</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{t('State')}</div>
 
               <div className="relative mt-3">
@@ -177,7 +177,7 @@ export default function DomainPage() {
           <div className="relative min-h-[320px]">
             {catalogLoading && catalogs.length > 0 && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-white/75 text-gray-600 backdrop-blur-sm dark:bg-gray-950/75 dark:text-gray-300">
-                {t('Updating catalogs...')}
+                <div className="rounded-2xl border-2 border-black bg-white px-6 py-3 text-black">{t('Updating catalogs...')}</div>
               </div>
             )}
 
@@ -204,7 +204,7 @@ export default function DomainPage() {
             )}
 
             {catalogLoading && catalogs.length === 0 && (
-              <div className="rounded-3xl border-2 border-black bg-white p-10 text-center text-gray-500 dark:bg-gray-950">
+              <div className="rounded-3xl border-2 border-black bg-white p-10 text-center text-black dark:bg-gray-950">
                 {t('Loading catalogs...')}
               </div>
             )}

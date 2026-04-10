@@ -45,7 +45,7 @@ export default function Dashboard() {
         className="min-h-[calc(100vh-9rem)]"
         contentClassName="flex min-h-[calc(100vh-9rem)] items-center justify-center"
       >
-        <div className="text-gray-600 dark:text-gray-300">{t('Loading dashboard...')}</div>
+        <div className="rounded-2xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-6" style={{ color: '#0F172A' }}>{t('Loading dashboard...')}</div>
       </BackgroundFrame>
     );
   }
@@ -57,21 +57,25 @@ export default function Dashboard() {
       contentClassName="space-y-8 p-4 sm:p-6 lg:p-8"
     >
       <div className="space-y-8">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-black bg-white/92 p-8 dark:bg-gray-950/92">
-          <div className="grid grid-cols-2 gap-6 text-center">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-white bg-black/28 p-8 dark:border-gray-800 dark:bg-gray-950/92">
+          <div className="grid grid-cols-3 gap-6 text-center">
             <div>
-              <div className="text-4xl font-black text-gray-900 dark:text-white">{domains.length}</div>
-              <div className="mt-1 text-sm uppercase tracking-wide text-gray-500">{t('Domains')}</div>
+              <div className="text-4xl font-black text-white">{domains.length}</div>
+              <div className="mt-1 text-sm uppercase tracking-wide text-white/90">{t('Domains')}</div>
             </div>
             <div>
-              <div className="text-4xl font-black text-gray-900 dark:text-white">{totals.catalogs}</div>
-              <div className="mt-1 text-sm uppercase tracking-wide text-gray-500">{t('Catalog Pages')}</div>
+              <div className="text-4xl font-black text-white">{totals.catalogs}</div>
+              <div className="mt-1 text-sm uppercase tracking-wide text-white/90">{t('Catalog Pages')}</div>
+            </div>
+            <div>
+              <div className="text-4xl font-black text-white">{totals.datasets}</div>
+              <div className="mt-1 text-sm uppercase tracking-wide text-white/90">{t('Datasets')}</div>
             </div>
           </div>
         </motion.div>
 
         <section className="space-y-4">
-          <h2 className="text-3xl font-black text-gray-900 dark:text-white">{t('Explore Domains')}</h2>
+          <h2 className="rounded-2xl border-2 border-white bg-black/28 p-4 text-3xl font-black text-white dark:border-gray-800 dark:bg-gray-950/92 dark:text-white">{t('Explore Domains')}</h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {domains.map((domain) => (
               <DomainCard key={domain.sector} domain={domain} onClick={() => navigate(`/domain/${domain.sector}`)} />

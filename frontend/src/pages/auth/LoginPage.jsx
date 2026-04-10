@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import AuthPanel from "../../components/auth/AuthPanel";
 import { AuthContext } from "../../context/AuthContextFixed";
+import logo from "../../../images/logo.png";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -21,8 +22,8 @@ export default function LoginPage() {
       <div className="hidden w-[46%] flex-col justify-between bg-[linear-gradient(180deg,rgba(11,99,206,0.92),rgba(15,118,110,0.96))] px-10 py-10 text-white lg:flex">
         <div>
           <Link to="/" className="inline-flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-lg font-black">
-              IDH
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white/15 ring-1 ring-white/20">
+              <img src={logo} alt="Intelligent Data Hub logo" className="h-full w-full object-contain p-1" />
             </div>
             <div>
               <div className="text-sm uppercase tracking-[0.24em] text-white/70">IDH</div>

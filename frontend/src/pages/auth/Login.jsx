@@ -35,8 +35,15 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[url('/images/Screenshot 2026-03-16 190230.png')] bg-no-repeat bg-cover bg-center flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-black/40 to-black/60 pointer-events-none" />
+    <div className="relative min-h-screen overflow-hidden bg-white flex items-center justify-center p-4">
+      <div className="absolute inset-0 pointer-events-none bg-white">
+        <img
+          src={fixedBgLogin}
+          alt=""
+          className="h-screen w-screen object-cover object-center fixed top-16 left-0"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-white/35 pointer-events-none" />
+      </div>
       <div className="relative z-10 w-full h-full">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
@@ -48,9 +55,9 @@ export default function Login() {
           <motion.div 
             animate={{ rotate: [0, 10, -10, 0] }}
             transition={{ duration: 3, repeat: Infinity }}
-            className="w-28 h-28 bg-gradient-to-r from-white via-primary to-accent rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-glow"
+            className="w-28 h-28 bg-black rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-glow overflow-hidden border border-white/30"
           >
-            <User className="w-16 h-16 text-white drop-shadow-lg" />
+            <User className="w-16 h-16 text-white" />
           </motion.div>
           <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent mb-6 leading-tight">
             Welcome
@@ -82,7 +89,9 @@ export default function Login() {
           disabled={loading}
           className="w-full bg-white/90 hover:bg-white text-gray-900 font-bold py-5 px-8 rounded-2xl flex items-center justify-center gap-4 shadow-2xl hover:shadow-glow transition-all duration-300 border border-white/30 text-lg backdrop-blur-sm mt-6"
         >
-          <User className="w-7 h-7" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black border-2 border-black">
+            <User className="w-6 h-6 text-white" />
+          </div>
           Continue with Google
         </motion.button>
 

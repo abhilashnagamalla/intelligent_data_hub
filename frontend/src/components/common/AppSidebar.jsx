@@ -25,6 +25,15 @@ const iconMap = {
   census: FileBarChart,
 };
 
+const sectorColors = {
+  agriculture: { light: '#10b981', dark: '#34d399', name: 'emerald' },
+  health: { light: '#ef4444', dark: '#f87171', name: 'red' },
+  education: { light: '#3b82f6', dark: '#60a5fa', name: 'blue' },
+  transport: { light: '#f97316', dark: '#fb923c', name: 'orange' },
+  census: { light: '#a855f7', dark: '#d8b4fe', name: 'purple' },
+  finance: { light: '#14b8a6', dark: '#2dd4bf', name: 'teal' },
+};
+
 const sectors = ["agriculture", "census", "education", "finance", "health", "transport"];
 
 export default function AppSidebar({ open, onClose }) {
@@ -124,6 +133,8 @@ export default function AppSidebar({ open, onClose }) {
               const Icon = iconMap[sector] || Database;
               const stats = domainMap.get(sector);
               const active = location.pathname.startsWith(`/domain/${sector}`);
+              const sectorColor = sectorColors[sector];
+              
               return (
                 <button
                   key={sector}
@@ -132,10 +143,20 @@ export default function AppSidebar({ open, onClose }) {
                     navigate(`/domain/${sector}`);
                     onClose?.();
                   }}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors ${
-                    active ? "bg-white/14 text-white" : "text-slate-300 hover:bg-white/8 hover:text-white"
+                  style={active ? { borderLeft: `4px solid ${sectorColor.light}` } : {}}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all duration-200 relative ${
+                    active 
+                      ? "bg-white/20 text-white shadow-md" 
+                      : "text-slate-300 hover:bg-white/8 hover:text-white"
                   }`}
                 >
+                  {/* Sector indicator dot */}
+                  {active && (
+                    <div 
+                      className="absolute left-1 w-2 h-2 rounded-full"
+                      style={{ backgroundColor: sectorColor.light }}
+                    />
+                  )}
                   <Icon className="h-4 w-4" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{t(formatSectorLabel(sector))}</div>

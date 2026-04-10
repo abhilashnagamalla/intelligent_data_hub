@@ -104,7 +104,7 @@ export default function Header({ onMenuToggle }) {
 
             {/* Logo */}
             <h1
-              className="text-base sm:text-xl md:text-2xl font-black bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent drop-shadow cursor-pointer hover:scale-105 transition-transform whitespace-nowrap"
+              className="text-base sm:text-xl md:text-2xl font-black text-black dark:text-white drop-shadow cursor-pointer hover:scale-105 transition-transform whitespace-nowrap"
               onClick={() => navigate('/')}
             >
               {/* Short name on xs, full name on sm+ */}
@@ -129,7 +129,7 @@ export default function Header({ onMenuToggle }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="w-full pl-11 pr-12 py-2.5 border border-gray-200 dark:border-gray-600 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all shadow-sm hover:shadow-md text-sm"
+                className="w-full pl-11 pr-12 py-2.5 border border-gray-200 dark:border-gray-600 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all shadow-sm hover:shadow-md text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               {(searchQuery || isSearching) && (
                 <button
