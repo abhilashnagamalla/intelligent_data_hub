@@ -8,6 +8,7 @@ import DatasetMeta from '../../components/dataset/DatasetMeta';
 import DatasetVisualizer from '../../components/dataset/DatasetVisualizerDynamic';
 import { getSectorBackground } from '../../constants/backgrounds';
 import useEngagement from '../../hooks/useEngagement';
+import { getCachedData, setCachedData, getCacheKey, createDebounce } from '../../utils/dataCache';
 
 const PAGE_SIZE = 150;
 const VISUALIZATION_ROW_LIMIT = 100;
@@ -232,20 +233,44 @@ export default function DatasetDetailLive() {
     if (activeView !== 'table' && activeView !== 'raw' && activeView !== 'viz') return;
 
     let cancelled = false;
+    
     async function loadPage() {
       setPageLoading(true);
       setPageError('');
       try {
+        // Check cache first for page data
+        try {
+          const cacheKey = getCacheKey('pagedata', dataset.id, page, PAGE_SIZE);
+          const cached = getCachedData(cacheKey);
+          
+          if (cached) {
+            setPageData(cached);
+            setPageLoading(false);
+            return;
+          }
+        } catch (cacheError) {
+          console.warn('Page cache read error:', cacheError);
+          // Continue with API call
+        }
+
         const response = await api.get(`/datasets/data/${encodeURIComponent(dataset.id)}`, {
           params: { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
         });
         if (!cancelled) {
-          setPageData({
+          const pageResult = {
             records: response.data?.records || [],
             columns: response.data?.columns || [],
             totalRows: response.data?.totalRows || 0,
             totalPages: response.data?.totalPages || 1,
-          });
+          };
+          setPageData(pageResult);
+          // Cache page data for 10 minutes
+          try {
+            setCachedData(cacheKey, pageResult, 10 * 60 * 1000);
+          } catch (cacheError) {
+            console.warn('Page cache write error:', cacheError);
+            // Non-blocking cache error
+          }
         }
       } catch (loadError) {
         if (!cancelled) setPageError(apiErrorMessage(loadError, 'Failed to load dataset page.'));
@@ -333,6 +358,20 @@ export default function DatasetDetailLive() {
     async function loadVisualization() {
       setVizState({ loading: true, data: null, error: '' });
       try {
+        // Check cache first for visualization
+        try {
+          const cacheKey = getCacheKey('viz', dataset.id, vizColumns.category, vizColumns.numeric, isSampleOnlyMode);
+          const cached = getCachedData(cacheKey);
+          
+          if (cached) {
+            setVizState({ loading: false, data: cached, error: '' });
+            return;
+          }
+        } catch (cacheError) {
+          console.warn('Viz cache read error:', cacheError);
+          // Continue with API call
+        }
+
         let response;
         if (!isSampleOnlyMode && customVizEnabled && vizColumns.category && vizColumns.numeric) {
           response = await api.get(`/datasets/${sector}/${encodeURIComponent(dataset.id)}/visualize`, {
@@ -354,7 +393,16 @@ export default function DatasetDetailLive() {
           firstChart.yLabel = vizColumns.numeric;
         }
 
-        if (!cancelled) setVizState({ loading: false, data: payload, error: '' });
+        if (!cancelled) {
+          setVizState({ loading: false, data: payload, error: '' });
+          // Cache visualization for 15 minutes
+          try {
+            setCachedData(cacheKey, payload, 15 * 60 * 1000);
+          } catch (cacheError) {
+            console.warn('Viz cache write error:', cacheError);
+            // Non-blocking cache error
+          }
+        }
       } catch (loadError) {
         if (!cancelled) setVizState({ loading: false, data: null, error: apiErrorMessage(loadError, 'Failed to generate visualization.') });
       }

@@ -33,7 +33,7 @@ export default function DatasetVisualizer({ visualization, insights = [] }) {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Automatically selected from full dataset content.</p>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-950 h-[420px]">
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-white h-[420px]">
         <ResponsiveContainer width="100%" height="100%">
           {chart.type === 'line' ? (
             <AreaChart data={chart.data}>

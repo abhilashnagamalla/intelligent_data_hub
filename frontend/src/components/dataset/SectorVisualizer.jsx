@@ -229,7 +229,7 @@ const SectorVisualizer = ({ catalogs }) => {
           return (
             <div
               key={chart.id}
-              className={`bg-white dark:bg-gray-900 p-8 sm:p-10 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all border border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-bottom-[50px] ${chart.type === 'pie' ? 'lg:col-span-2' : ''}`}
+              className={`bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all border border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-bottom-[50px] ${chart.type === 'pie' ? 'lg:col-span-2' : ''}`}
               style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'both' }}
             >
                {/* Chart Header */}

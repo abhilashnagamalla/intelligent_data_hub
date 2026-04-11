@@ -52,18 +52,22 @@ export default function Landing() {
         <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/95 shadow-sm backdrop-blur-sm dark:bg-slate-950/40">
           <div className="relative flex items-center px-4 py-3 sm:px-6 sm:py-4 lg:px-16">
             <div className="flex flex-1 justify-start items-center gap-3">
-              {/* Header Icons */}
-              <div className="flex items-center gap-1">
-                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-orange-100 text-orange-600 border-2 border-black dark:bg-orange-900/30 dark:text-orange-400 dark:border-black">
+              {/* Header Icons - Unified Bar */}
+              <div className="flex items-center border-2 border-black rounded-lg dark:border-black overflow-hidden shadow-md">
+                {/* Globe - Section 1 */}
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center bg-orange-100 text-orange-600 border-r-2 border-black dark:bg-orange-900/30 dark:text-orange-400 dark:border-black">
                   <Globe className="h-4 w-4 sm:h-7 sm:w-7" />
                 </div>
-                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-blue-100 text-blue-600 border-2 border-black dark:bg-blue-900/30 dark:text-blue-400 dark:border-black">
+                {/* Database - Section 2 */}
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center bg-blue-100 text-blue-600 border-r-2 border-black dark:bg-blue-900/30 dark:text-blue-400 dark:border-black">
                   <Database className="h-4 w-4 sm:h-7 sm:w-7" />
                 </div>
-                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-purple-100 text-purple-600 border-2 border-black dark:bg-purple-900/30 dark:text-purple-400 dark:border-black">
+                {/* Bot - Section 3 */}
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center bg-purple-100 text-purple-600 border-r-2 border-black dark:bg-purple-900/30 dark:text-purple-400 dark:border-black">
                   <Bot className="h-4 w-4 sm:h-7 sm:w-7" />
                 </div>
-                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-green-100 text-green-600 border-2 border-black dark:bg-green-900/30 dark:text-green-400 dark:border-black">
+                {/* BarChart - Section 4 */}
+                <div className="flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
                   <BarChart className="h-4 w-4 sm:h-7 sm:w-7" />
                 </div>
               </div>

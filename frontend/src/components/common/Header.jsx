@@ -201,9 +201,9 @@ export default function Header({ onMenuToggle }) {
             ) : (
               <button
                 onClick={() => navigate('/')}
-                className="flex items-center gap-1.5 px-3 sm:px-5 py-2 bg-primary/90 hover:bg-primary text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-glow text-xs sm:text-sm whitespace-nowrap"
+                className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-primary/90 hover:bg-primary text-white font-semibold rounded-2xl transition-all shadow-lg hover:shadow-glow text-xs sm:text-sm whitespace-nowrap"
               >
-                <LogIn className="w-4 h-4 flex-shrink-0" />
+                <LogIn className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
                 <span className="hidden sm:inline">{t('Login with Google')}</span>
                 <span className="sm:hidden">{t('Login')}</span>
               </button>

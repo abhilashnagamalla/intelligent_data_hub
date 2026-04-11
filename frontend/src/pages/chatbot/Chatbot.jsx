@@ -6,6 +6,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const DEFAULT_CHAT_TITLE = 'New Chat';
 
+function stripMarkdownFormatting(text) {
+  if (!text) return text;
+  // Remove ## headers
+  text = text.replace(/^#{1,6}\s+/gm, '');
+  // Remove ** bold formatting
+  text = text.replace(/\*\*(.+?)\*\*/g, '$1');
+  // Remove * italic formatting
+  text = text.replace(/\*(.+?)\*/g, '$1');
+  return text;
+}
+
 function formatChatTitle(value) {
   const normalized = String(value || '').replace(/\s+/g, ' ').trim();
   if (!normalized) return DEFAULT_CHAT_TITLE;
@@ -314,7 +325,7 @@ export default function Chatbot({ onClose, sector: propSector }) {
                       <AlertTriangle className="w-4 h-4" /> Domain restriction active
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{stripMarkdownFormatting(message.content)}</div>
                   <StructuredResult message={message} />
                   {message.matches?.length > 0 && (
                     <div className="mt-4 space-y-3">

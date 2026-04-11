@@ -136,6 +136,9 @@ const english = {
   "Dataset Insights": "Dataset Insights",
   "Automatically selected from full dataset content.": "Automatically selected from full dataset content.",
   "View all details": "View all details",
+  "Quick Filters": "Quick Filters",
+  "Catalog count is based on sector pagination pages, not raw dataset totals.": "Catalog count is based on sector pagination pages, not raw dataset totals.",
+  "Catalogs": "Catalogs",
 };
 
 const resources = {
@@ -267,6 +270,9 @@ const resources = {
       "Dataset Insights": "डेटासेट अंतर्दृष्टि",
       "Automatically selected from full dataset content.": "पूर्ण डेटासेट सामग्री से स्वचालित रूप से चुना गया।",
       "View all details": "सभी विवरण देखें",
+      "Quick Filters": "त्वरित फ़िल्टर",
+      "Catalog count is based on sector pagination pages, not raw dataset totals.": "कैटलॉग गिनती सेक्टर पृष्ठों पर आधारित है, कुल डेटासेट पर नहीं।",
+      "Catalogs": "कैटलॉग",
     },
   },
   te: {
@@ -362,6 +368,9 @@ const resources = {
       "Toggle dark mode": "డార్క్ మోడ్ మార్చండి",
       "Dark": "డార్క్",
       "Light": "లైట్",
+      "Quick Filters": "త్వరిత ఫిల్టర్లు",
+      "Catalog count is based on sector pagination pages, not raw dataset totals.": "కేటలాగ్ లెక్క సెక్టార్ పేజీల ఆధారంగా ఉంటుంది.",
+      "Catalogs": "కేటలాగ్‌లు",
     },
   },
   ta: {
@@ -450,6 +459,9 @@ const resources = {
       "Toggle dark mode": "இருண்ட நிலையை மாற்றவும்",
       "Dark": "இருண்ட",
       "Light": "ஒளி",
+      "Quick Filters": "விரைவான வடிகட்டிகள்",
+      "Catalog count is based on sector pagination pages, not raw dataset totals.": "பட்டியல் எண்ணிக்கை பாக்கெட் பக்கங்களை அடிப்படையாக கொண்டுள்ளது, மொத்த தரவு தொகுப்புகளை அல்ல.",
+      "Catalogs": "பட்டியல்கள்",
     },
   },
   ml: {
@@ -536,6 +548,9 @@ const resources = {
       "Toggle dark mode": "ഡാർക്ക് മോഡ് മാറ്റുക",
       "Dark": "ഡാർക്ക്",
       "Light": "ലൈറ്റ്",
+      "Quick Filters": "വേഗത്തിലുള്ള ഫിൽട്ടറുകൾ",
+      "Catalog count is based on sector pagination pages, not raw dataset totals.": "കാറ്റലൊഗ് സംഖ്യ സെക്ടർ പേജിനേഷൻ പേജുകളെ അടിസ്ഥാനമാക്കി, മൊത്തം ഡേറ്റാസെറ്റുകൾ അല്ല.",
+      "Catalogs": "കാറ്റലൊഗുകൾ",
     },
   },
   kn: {
@@ -622,6 +637,9 @@ const resources = {
       "Toggle dark mode": "ಡಾರ್ಕ್ ಮೋಡ್ ಬದಲಿಸಿ",
       "Dark": "ಡಾರ್ಕ್",
       "Light": "ಲೈಟ್",
+      "Quick Filters": "ತ್ವರಿತ ಫಿಲ್ಟರ್‌ಗಳು",
+      "Catalog count is based on sector pagination pages, not raw dataset totals.": "ಕ್ಯಾಟಲಾಗ್ ಸಂಖ್ಯೆ ಸೆಕ್ಟರ್ ಪೃಷ್ಠಗಳ ಆಧಾರದಲ್ಲಿ ಇರುತ್ತದೆ, ಒಟ್ಟು ಡೇಟಾಸೆಟ್‌ಗಳ ಮೇಲೆ ಅಲ್ಲ.",
+      "Catalogs": "ಕ್ಯಾಟಲಾಗ್‌ಗಳು",
     },
   },
 };

@@ -11,6 +11,7 @@ import { getSectorBackground } from '../../constants/backgrounds';
 import { formatSectorLabel } from '../../constants/sectors';
 import { allStatesOption, getStateName, indianStates } from '../../constants/states';
 import { usePerformanceMonitor } from '../../utils/performanceMonitor';
+import { getCachedData, setCachedData, getCacheKey } from '../../utils/dataCache';
 
 const ITEMS_PER_PAGE = 9;
 
@@ -73,6 +74,23 @@ export default function DomainPage() {
         if (hasActiveStateFilter) {
           params.state = activeStateCode;
         }
+
+        // Create cache key from sector, page, state filter
+        const cacheKey = getCacheKey('catalogs', sector, page, ITEMS_PER_PAGE, hasActiveStateFilter ? activeStateCode : 'all');
+        
+        // Check cache first for 15 minutes
+        const cached = getCachedData(cacheKey);
+        if (cached) {
+          setCatalogs(cached.datasets || []);
+          setStats({
+            catalogs: cached.totalPages || 0,
+            datasets: cached.totalDatasets || 0,
+          });
+          setWarning(cached.warning || '');
+          setCatalogLoading(false);
+          return;
+        }
+
         const response = await api.get(`/datasets/${sector}`, { params });
 
         if (cancelled) return;
@@ -84,6 +102,9 @@ export default function DomainPage() {
           datasets: payload.totalDatasets || 0,
         });
         setWarning(payload.warning || '');
+        
+        // Cache the payload for 15 minutes
+        setCachedData(cacheKey, payload, 15 * 60 * 1000);
       } catch (error) {
         console.error(error);
         if (!cancelled) {
@@ -151,7 +172,7 @@ export default function DomainPage() {
             </div>
 
             <div className="rounded-2xl border-2 border-black bg-white p-4 dark:bg-gray-900/80">
-              <div className="text-xs uppercase tracking-wide text-gray-700 dark:text-gray-400">{t('Quick Filters')}</div>
+              <div className="text-xs tracking-wide text-gray-700 dark:text-gray-400">{t('Quick Filters')}</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{t('State')}</div>
 
               <div className="relative mt-3">
@@ -209,7 +230,7 @@ export default function DomainPage() {
                   <CatalogCard
                     key={catalog.id}
                     dataset={catalog}
-                    onView={() => navigate(`/dataset/${encodeURIComponent(catalog.id)}`, { state: catalog })}
+                    onView={() => navigate(`/dataset/${encodeURIComponent(catalog.id)}`, { state: { ...catalog, sectorKey: sector, sector } })}
                   />
                 ))}
               </div>

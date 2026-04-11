@@ -273,7 +273,7 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
       </div>
 
       {/* Chart area */}
-      <div className="surface-card h-[420px] p-4">
+      <div className="rounded-3xl border-2 border-black bg-white shadow-sm dark:border-white h-[420px] p-4">
         <ResponsiveContainer width="100%" height="100%">
           {chart.type === "line" ? (
             <AreaChart data={chart.data} margin={{ top: 12, right: 16, left: 4, bottom: chartBottomMargin }}>

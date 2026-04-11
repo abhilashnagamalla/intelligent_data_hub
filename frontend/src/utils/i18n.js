@@ -459,7 +459,8 @@ const resources = {
       'Dataset summaries & downloads': 'தரவு சுருக்கங்கள் மற்றும் பதிவிறக்கங்கள்',
       'Visualization': 'படங்கள்',
       'Ask about data...': 'தரவு பற்றி கேளுங்கள்...',
-      'Powered by domain data analysis • Secure & accurate insights': 'டொமைன் தரவு பகுப்பாய்வால் இயக்கப்படுகிறது • பாதுகாப்பான மற்றும் துல்லியமான நுண்ணறிவு'
+      'Powered by domain data analysis • Secure & accurate insights': 'டொமைன் தரவு பகுப்பாய்வால் இயக்கப்படுகிறது • பாதுகாப்பான மற்றும் துல்லியமான நுண்ணறிவு',
+      'Catalog count is based on sector pagination pages, not raw dataset totals.': 'பட்டியல் எண்ணிக்கை பாக்கெட் பக்கங்களை அடிப்படையாக கொண்டுள்ளது, மொத்த தரவு தொகுப்புகளை அல்ல.'
     }
   },
   // ... (kn, ml, bn, mr, gu - using existing translations from previous i18n.js, adding new keys similarly)
@@ -489,6 +490,7 @@ const resources = {
       'Language': 'ಭಾಷೆ',
       'Search datasets, domains...': 'ಡೇಟಾಸೆಟ್‌ಗಳು, ಡೊಮೈನ್‌ಗಳನ್ನು ಹುಡುಕಿ...',
       'Quick Filters': 'ತ್ವರಿತ ಫಿಲ್ಟರ್‌ಗಳು',
+      'Catalog count is based on sector pagination pages, not raw dataset totals.': 'ಕ್ಯಾಟಲಾಗ್ ಸಂಖ್ಯೆ ಸೆಕ್ಟರ್ ಪೃಷ್ಠಗಳ ಆಧಾರದಲ್ಲಿ ಇರುತ್ತದೆ, ಒಟ್ಟು ಡೇಟಾಸೆಟ್‌ಗಳ ಮೇಲೆ ಅಲ್ಲ.'
       'Visualizations': 'ಗ್ರಾಫ್‌ಗಳು',
       'Weekly Updated': 'ಸುಮಾರು ಪ్రತಿ ವಾರ ಪುರಸ್ಕರಿಸುತ್ತಾರೆ',
       'Weekly Updated Datasets': 'ಸುಮಾರು ಪ్రತಿ వಾರ ನವೀಕರಿಸಲಾದ ಡೇಟಾಸೆಟ್‌ಗಳು',
@@ -602,6 +604,7 @@ const resources = {
   bn: {
     translation: {
       'Intelligent Data Hub': 'বুদ্ধিমান ডেটা হাব',
+      'Catalog count is based on sector pagination pages, not raw dataset totals.': 'ক্যাটালগ সংখ্যা সেক্টর পেজিনেশন পৃষ্ঠাগুলির উপর ভিত্তি করে, মোট ডেটাসেট নয়.',
       'Dashboard': 'ড্যাশবোর্ড',
       'Overview': 'অভিজ্ঞতা',
       'Profile': 'প্রোফাইল',
@@ -643,6 +646,7 @@ const resources = {
   mr: {
     translation: {
       'Intelligent Data Hub': 'बुद्धिमान डेटा हब',
+      'Catalog count is based on sector pagination pages, not raw dataset totals.': 'कॅटलॉग मोजणी क्षेत्र पेजिनेशन पृष्ठांवर आधारित आहे, एकूण डेटासेट नाहीत.',
       'Dashboard': 'डॅशबोर्ड',
       'Overview': 'विहंगावलोकन',
       'Profile': 'प्रोफाइल',
@@ -691,6 +695,7 @@ const resources = {
   gu: {
     translation: {
       'Intelligent Data Hub': 'બુદ્ધિશાળી ડેટા હબ',
+      'Catalog count is based on sector pagination pages, not raw dataset totals.': 'કેટલોગ ગણતરી સેક્ટર પેજિંગ પૃષ્ઠો પર આધારિત છે, કુલ ડેટાસેટ્સ નહીં.'
       'Dashboard': 'ડેશબોર્ડ',
       'Overview': 'ઝાંખી',
       'Profile': 'પ્રોફાઇલ',

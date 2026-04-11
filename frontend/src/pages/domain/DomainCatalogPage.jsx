@@ -99,8 +99,8 @@ export default function DomainCatalogPage() {
 
           {/* Quick Filter Sub Container */}
           <div className="rounded-xl border border-[var(--border-subtle)]/30 bg-[var(--surface-muted)]/40 p-4 flex flex-col justify-between">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)] block mb-3">
-              {t("Quick Filter")}
+            <label className="text-xs font-semibold tracking-[0.18em] text-[var(--text-primary)] block mb-3">
+              {t("Quick Filters")}
             </label>
             <div className="relative flex-1 flex items-center">
               <select

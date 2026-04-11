@@ -74,7 +74,7 @@ export default function DatasetVisualizerDynamic({ visualization, insights = [] 
         </p>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 h-[420px]">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 h-[420px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chart.data} margin={{ top: 12, right: 24, left: 8, bottom: chartBottomMargin }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />

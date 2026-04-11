@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import difflib
 import io
 import json
 import math
@@ -296,10 +297,82 @@ STATE_FILTER_ALIAS_LOOKUP = sorted(
 )
 
 
-def contains_normalized_phrase(text: str, phrase: str) -> bool:
+def fuzzy_match_phrase(text: str, phrase: str, cutoff: float = 0.8) -> bool:
+    """
+    Use fuzzy matching to check if phrase appears in text with similarity threshold.
+    For multi-word phrases, requires that at least the first word matches closely.
+    
+    Args:
+        text: The text to search in
+        phrase: The phrase to search for
+        cutoff: Similarity threshold (0.0-1.0), default 0.8 (80% match)
+    
+    Returns:
+        True if close match found, False otherwise
+    """
     if not text or not phrase:
         return False
-    return f" {phrase} " in f" {text} "
+    
+    # First try exact match for efficiency
+    if f" {phrase} " in f" {text} ":
+        return True
+    
+    # Split into words for better matching
+    text_words = text.split()
+    phrase_words = phrase.split()
+    
+    # For single-word phrases, check against each word in text
+    if len(phrase_words) == 1:
+        phrase_word = phrase_words[0]
+        matches = difflib.get_close_matches(phrase_word, text_words, n=1, cutoff=cutoff)
+        return len(matches) > 0
+    
+    # For multi-word phrases, be more strict
+    # Require that at least the first word matches closely
+    phrase_first_word = phrase_words[0]
+    first_word_matches = difflib.get_close_matches(phrase_first_word, text_words, n=len(text_words), cutoff=cutoff)
+    
+    if not first_word_matches:
+        return False
+    
+    # Now try to find close match with consecutive words starting from first word match
+    for i, text_word in enumerate(text_words):
+        if text_word in first_word_matches:
+            # Found a word that matches the first word of the phrase
+            # Now check consecutive words from this position
+            if i + len(phrase_words) <= len(text_words):
+                text_chunk = " ".join(text_words[i:i + len(phrase_words)])
+                similarity_ratio = difflib.SequenceMatcher(None, phrase, text_chunk).ratio()
+                # Use higher cutoff for multi-word comparisons
+                if similarity_ratio >= max(cutoff, 0.85):
+                    return True
+    
+    return False
+
+
+
+def contains_normalized_phrase(text: str, phrase: str) -> bool:
+    """
+    Check if phrase appears in text (exact match or fuzzy match).
+    Uses fuzzy matching to handle typos and variations.
+    
+    Args:
+        text: The text to search in
+        phrase: The phrase to search for
+    
+    Returns:
+        True if phrase found (exact or fuzzy match)
+    """
+    if not text or not phrase:
+        return False
+    
+    # Try exact match first
+    if f" {phrase} " in f" {text} ":
+        return True
+    
+    # Use fuzzy matching with 0.8 cutoff (80% similarity)
+    return fuzzy_match_phrase(text, phrase, cutoff=0.8)
+
 
 
 def normalize_state_code(value: Any) -> str:
@@ -439,11 +512,47 @@ def normalize_tag_list(*values: Any) -> list[str]:
 
 
 def detect_query_domains(query_terms: list[str]) -> set[str]:
+    """
+    Detect domain/sector keywords in query terms using fuzzy matching.
+    
+    Args:
+        query_terms: List of normalized query terms
+    
+    Returns:
+        Set of detected sector keys (e.g., 'health', 'agriculture')
+    """
+    # Common English stop words that shouldn't be fuzzy matched
+    stop_words = {
+        "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+        "has", "he", "in", "is", "it", "its", "of", "on", "or", "that",
+        "the", "to", "was", "will", "with", "an", "the", "a",
+        # Additional stop words to prevent false positives
+        "list", "data", "entry", "entries", "file", "files",
+        "name", "names", "record", "records", "set", "sets",
+        "wise", "based", "about", "info", "information",
+    }
+    
     domains: set[str] = set()
     for sector_key, keywords in DOMAIN_KEYWORDS.items():
-        if any(term in keywords for term in query_terms):
-            domains.add(sector_key)
+        for term in query_terms:
+            # Skip stop words to avoid false positives (but allow exact matches)
+            if term in stop_words:
+                # Still check for exact match even if it's a stop word
+                if term not in keywords:
+                    continue
+            
+            # Exact match (always use this, even for borderline terms like "farmers")
+            if term in keywords:
+                domains.add(sector_key)
+                break
+            
+            # Fuzzy match with higher cutoff (0.85) to avoid "farmers" -> "fares"
+            matches = difflib.get_close_matches(term, list(keywords), n=1, cutoff=0.85)
+            if matches:
+                domains.add(sector_key)
+                break
     return domains
+
 
 
 def detect_query_states(query_text: str) -> set[str]:
@@ -1428,29 +1537,44 @@ def remap_record(record: dict[str, Any], field_map: dict[str, str]) -> dict[str,
 
 
 def fetch_resource_metadata(resource_id: str, *, force: bool = False) -> dict[str, Any]:
+    import logging
+    logger = logging.getLogger(__name__)
+    
     normalized_id = str(resource_id).replace(".csv", "")
+    logger.info(f"fetch_resource_metadata: Starting for {normalized_id}, force={force}")
 
     with _metadata_lock:
         cache = load_resource_metadata_cache()
         cached = cache.get(normalized_id)
         cached_age = time.time() - safe_int((cached or {}).get("cachedAt")) if cached else None
         if cached and not force and cached_age is not None and cached_age < RESOURCE_METADATA_TTL_SECONDS:
+            logger.info(f"fetch_resource_metadata: Using cached data (age: {cached_age:.1f}s)")
             return cached
 
     try:
+        logger.info(f"fetch_resource_metadata: Calling API for {normalized_id}")
         payload = request_json(api_url(normalized_id, limit=1, offset=0))
-    except requests.RequestException:
+        logger.info(f"fetch_resource_metadata: API returned payload with keys: {list(payload.keys())}")
+    except requests.RequestException as e:
+        logger.warning(f"fetch_resource_metadata: API request failed: {type(e).__name__}: {str(e)}")
         cached = get_cached_resource_metadata(normalized_id)
         if cached:
+            logger.info(f"fetch_resource_metadata: Using fallback cache")
             return cached
+        logger.error(f"fetch_resource_metadata: No fallback cache available, re-raising exception")
         raise
 
     fields, _ = field_map_from_payload(payload)
+    logger.info(f"fetch_resource_metadata: Extracted {len(fields)} fields from payload")
+    
+    num_rows = safe_int(payload.get("total") or payload.get("count"))
+    logger.info(f"fetch_resource_metadata: Dataset has {num_rows} rows")
+    
     metadata = {
         "resourceId": normalized_id,
         "publishedDate": normalize_date(payload.get("created_date")),
         "updatedDate": normalize_date(payload.get("updated_date")),
-        "numberOfRows": safe_int(payload.get("total") or payload.get("count")),
+        "numberOfRows": num_rows,
         "numberOfColumns": len(fields),
         "fieldIds": [str(field.get("id") or "") for field in fields if isinstance(field, dict)],
         "fieldNames": [str(field.get("name") or field.get("id") or "") for field in fields if isinstance(field, dict)],
@@ -1460,7 +1584,8 @@ def fetch_resource_metadata(resource_id: str, *, force: bool = False) -> dict[st
     with _metadata_lock:
         cache = load_resource_metadata_cache()
         cache[normalized_id] = metadata
-
+    
+    logger.info(f"fetch_resource_metadata: Cached metadata for {normalized_id}")
     return metadata
 
 
@@ -1733,29 +1858,56 @@ def fetch_dataset_page(resource_id: str, *, limit: int = DETAIL_PAGE_SIZE, offse
 
 
 def fetch_full_dataset(resource_id: str, *, max_rows: int = MAX_VISUALIZATION_ROWS) -> dict[str, Any]:
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"fetch_full_dataset: Starting fetch for {resource_id}, max_rows={max_rows}")
     metadata = fetch_resource_metadata(resource_id)
     total_rows = safe_int(metadata.get("numberOfRows"))
+    logger.info(f"fetch_full_dataset: Metadata retrieved - total rows in dataset: {total_rows}")
+    
     if total_rows > max_rows:
+        logger.warning(f"fetch_full_dataset: Dataset too large ({total_rows} > {max_rows})")
         return {"tooLarge": True, "totalRows": total_rows, "maxRows": max_rows, "records": [], "columns": metadata.get("fieldNames", [])}
 
     rows: list[dict[str, Any]] = []
     columns: list[str] = []
     offset = 0
+    page_count = 0
 
     while True:
-        page = fetch_dataset_page(resource_id, limit=DETAIL_PAGE_SIZE, offset=offset)
+        page_count += 1
+        try:
+            page = fetch_dataset_page(resource_id, limit=DETAIL_PAGE_SIZE, offset=offset)
+        except Exception as e:
+            logger.error(f"fetch_full_dataset: Error fetching page {page_count} at offset {offset}: {type(e).__name__}: {str(e)}")
+            if offset == 0:  # Failed on first page
+                raise
+            break  # Stop fetching more pages if we already have some
+        
         if not columns:
             columns = page["columns"]
+            logger.info(f"fetch_full_dataset: Columns from first page: {len(columns)} columns")
+        
         page_records = page["records"]
+        logger.info(f"fetch_full_dataset: Page {page_count} - fetched {len(page_records)} records, total so far: {len(rows)}")
+        
         if not page_records:
+            logger.info(f"fetch_full_dataset: Page {page_count} returned no records, stopping fetch")
             break
+        
         rows.extend(page_records)
         offset += page["limit"]
+        
         if len(rows) >= total_rows or len(page_records) < page["limit"]:
+            logger.info(f"fetch_full_dataset: Stopping - reached end of data")
             break
+        
         if len(rows) > max_rows:
+            logger.warning(f"fetch_full_dataset: Stopping - accumulated {len(rows)} rows exceeds max_rows={max_rows}")
             return {"tooLarge": True, "totalRows": total_rows or len(rows), "maxRows": max_rows, "records": [], "columns": columns}
 
+    logger.info(f"fetch_full_dataset: Complete - fetched {len(rows)} records across {page_count} pages")
     return {"tooLarge": False, "totalRows": total_rows or len(rows), "maxRows": max_rows, "records": rows, "columns": columns}
 
 

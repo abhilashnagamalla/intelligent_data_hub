@@ -1,5 +1,5 @@
-import { Mail, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 
 const teamMembers = [
   { name: 'Abhilash', email: 'abhilashnagamalla35@gmail.com' },
@@ -10,6 +10,9 @@ const teamMembers = [
 export default function ContactUs({ collapsed }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [hoveredEmail, setHoveredEmail] = useState(null);
+  const [showPopover, setShowPopover] = useState(false);
+  const popoverRef = useRef(null);
+  const buttonRef = useRef(null);
 
   const handleEmailClick = (email, name) => {
     const subject = 'Inquiry about Intelligent Data Hub';
@@ -18,8 +21,31 @@ export default function ContactUs({ collapsed }) {
     window.location.href = mailtoLink;
   };
 
+  // Close popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target) && 
+          buttonRef.current && !buttonRef.current.contains(e.target)) {
+        setShowPopover(false);
+      }
+    };
+
+    if (showPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showPopover]);
+
+  const toggleContactsPopover = () => {
+    if (collapsed) {
+      setShowPopover(!showPopover);
+    } else {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
   return (
-    <div className="border-t-2 border-black p-2 sm:p-3 mt-auto space-y-1">
+    <div className="border-t-2 border-black p-2 sm:p-3 mt-auto space-y-1 relative">
       {/* Suggestion/Feedback Text */}
       {!collapsed && (
         <div className="text-xs text-gray-500 px-2 py-1">
@@ -29,8 +55,10 @@ export default function ContactUs({ collapsed }) {
 
       {/* Dropdown Toggle Button */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        ref={buttonRef}
+        onClick={toggleContactsPopover}
         className="w-full flex items-center gap-2 rounded-lg p-2 hover:bg-white/10 transition-colors group"
+        title={collapsed ? 'Contact Us' : undefined}
       >
         <Mail className="w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0 text-gray-400 group-hover:text-blue-400 transition-colors" />
         {!collapsed && (
@@ -49,7 +77,7 @@ export default function ContactUs({ collapsed }) {
         )}
       </button>
 
-      {/* Dropdown Content */}
+      {/* Dropdown Content - for expanded sidebar */}
       {isExpanded && !collapsed && (
         <div className="space-y-1 mt-2 pl-1">
           {teamMembers.map((member) => (
@@ -62,6 +90,50 @@ export default function ContactUs({ collapsed }) {
               title={`Email ${member.name}`}
             >
               <Mail className="w-3 sm:w-3.5 h-3 sm:h-3.5 flex-shrink-0 text-gray-500 group-hover:text-blue-400 transition-colors" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-gray-300 truncate">
+                  {member.name}
+                </div>
+                <div className="text-xs text-gray-500 truncate group-hover:text-blue-300 transition-colors">
+                  {hoveredEmail === member.email ? member.email : member.email.split('@')[0]}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Popover - for collapsed sidebar */}
+      {showPopover && collapsed && (
+        <div
+          ref={popoverRef}
+          className="fixed bottom-24 left-20 z-[999] bg-gray-900 border-2 border-white/20 rounded-lg shadow-2xl p-3 w-64 space-y-1"
+        >
+          {/* Close button */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-300 uppercase tracking-wide">Contact Us</span>
+            <button
+              onClick={() => setShowPopover(false)}
+              className="p-1 hover:bg-white/10 rounded transition-colors"
+            >
+              <X className="w-3 h-3 text-gray-400" />
+            </button>
+          </div>
+
+          {/* Team members */}
+          {teamMembers.map((member) => (
+            <button
+              key={member.email}
+              onClick={() => {
+                handleEmailClick(member.email, member.name);
+                setShowPopover(false);
+              }}
+              onMouseEnter={() => setHoveredEmail(member.email)}
+              onMouseLeave={() => setHoveredEmail(null)}
+              className="w-full flex items-center gap-2 rounded-lg border-2 border-transparent p-2 hover:bg-white/10 hover:border-white/40 transition-all group text-left"
+              title={`Email ${member.name}`}
+            >
+              <Mail className="w-3.5 h-3.5 flex-shrink-0 text-gray-500 group-hover:text-blue-400 transition-colors" />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-gray-300 truncate">
                   {member.name}

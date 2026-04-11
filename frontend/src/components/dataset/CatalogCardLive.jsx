@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import GeoViewModal from './GeoViewModalMap';
 import { AuthContext } from '../../context/AuthContext';
+import { getCachedData, setCachedData, getCacheKey } from '../../utils/dataCache';
 
 function formatDate(value) {
   if (!value) return 'N/A';
@@ -35,14 +36,38 @@ export default function CatalogCardLive({ dataset, onView }) {
 
   useEffect(() => {
     if (!sectorKey || !dataset.id) return;
+    
+    try {
+      // Check cache first for stats (5 minute TTL)
+      const cacheKey = getCacheKey('card-stats', sectorKey, dataset.id);
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        setViews(cached.views);
+        setDownloads(cached.downloads);
+        return;
+      }
+    } catch (cacheError) {
+      console.warn('Cache read error:', cacheError);
+      // Continue with API call
+    }
+
     // Stagger stats requests with a random delay to avoid 429 rate limits
     // when multiple cards load simultaneously
-    const delay = Math.random() * 2000; // 0-2s random spread
+    const delay = Math.random() * 1500; // 0-1.5s random spread
     const timeoutId = setTimeout(() => {
       api.get(`/datasets/${sectorKey}/${encodedDatasetId}/stats`)
         .then((res) => {
-          setViews(res.data?.stats?.views ?? 0);
-          setDownloads(res.data?.stats?.downloads ?? 0);
+          const viewsCount = res.data?.stats?.views ?? 0;
+          const downloadsCount = res.data?.stats?.downloads ?? 0;
+          setViews(viewsCount);
+          setDownloads(downloadsCount);
+          // Cache for 10 minutes
+          try {
+            setCachedData(cacheKey, { views: viewsCount, downloads: downloadsCount }, 10 * 60 * 1000);
+          } catch (cacheError) {
+            console.warn('Cache write error:', cacheError);
+            // Non-blocking cache error
+          }
         })
         .catch(() => {});
     }, delay);

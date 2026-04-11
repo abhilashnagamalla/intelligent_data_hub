@@ -56,6 +56,7 @@ export default function Sidebar({ open, onClose }) {
   const [domains, setDomains] = useState(defaultDomains);
   const [hoveredDomain, setHoveredDomain] = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [currentSector, setCurrentSector] = useState(null);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -74,7 +75,21 @@ export default function Sidebar({ open, onClose }) {
       });
   }, []);
 
+  // Extract current sector from route params, location state, or pathname
+  useEffect(() => {
+    const pathSegments = location.pathname.split('/');
+    const domainIndex = pathSegments.indexOf('domain');
+    const sectorFromPath = domainIndex >= 0 ? pathSegments[domainIndex + 1] : null;
+    const sectorFromState = location.state?.sector || location.state?.sectorKey;
+    
+    setCurrentSector(sectorFromPath || sectorFromState);
+  }, [location.pathname, location.state]);
+
   const isActive = (path) => location.pathname.includes(path);
+  const isDomainActive = (sector) => {
+    // Check if domain is active from direct navigation or from dataset viewing
+    return currentSector && currentSector.toLowerCase() === sector.toLowerCase();
+  };
 
   const handleNav = (path) => {
     navigate(path);
@@ -104,6 +119,7 @@ export default function Sidebar({ open, onClose }) {
           setMousePos={setMousePos}
           domains={domains}
           isActive={isActive}
+          isDomainActive={isDomainActive}
           handleNav={handleNav}
           t={t}
           showClose={false}
@@ -131,6 +147,7 @@ export default function Sidebar({ open, onClose }) {
           setMousePos={setMousePos}
           domains={domains}
           isActive={isActive}
+          isDomainActive={isDomainActive}
           handleNav={handleNav}
           t={t}
           showClose={true}
@@ -141,7 +158,7 @@ export default function Sidebar({ open, onClose }) {
   );
 }
 
-function SidebarContent({ collapsed, setCollapsed, hoveredDomain, setHoveredDomain, mousePos, setMousePos, domains, isActive, handleNav, t, showClose, onClose }) {
+function SidebarContent({ collapsed, setCollapsed, hoveredDomain, setHoveredDomain, mousePos, setMousePos, domains, isActive, isDomainActive, handleNav, t, showClose, onClose }) {
   return (
     <>
       {/* Header */}
@@ -191,7 +208,7 @@ function SidebarContent({ collapsed, setCollapsed, hoveredDomain, setHoveredDoma
             {domains.map((domain, index) => {
               const Icon = domainIcons[domain.sector.toLowerCase()] || LayoutDashboard;
               const sectorColor = sectorColors[domain.sector.toLowerCase()];
-              const isActiveDomain = isActive(`/domain/${domain.sector}`);
+              const isActiveDomain = isDomainActive(domain.sector);
               
               return (
                 <button

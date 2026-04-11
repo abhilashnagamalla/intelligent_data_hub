@@ -118,6 +118,7 @@ MISSING_MARKERS = {"", "-", "--", "na", "n/a", "nan", "none", "null"}
 
 _session_history: dict[str, list[dict[str, str]]] = {}
 _session_state: dict[str, dict[str, Any]] = {}
+_session_dataframes: dict[str, dict[str, Any]] = {}  # Cache dataframes: session_id -> {dataset_id -> {frame, metadata}}
 
 _metadata_index_lock = threading.Lock()
 _metadata_index: dict[str, Any] | None = None
@@ -243,6 +244,34 @@ def record_session_message(session_id: str, role: str, content: str) -> list[dic
 
 def session_state(session_id: str) -> dict[str, Any]:
     return _session_state.setdefault(session_id, {})
+
+
+def cache_session_dataframe(session_id: str, dataset_id: str, frame: pd.DataFrame, metadata: dict[str, Any]) -> None:
+    """Cache a loaded dataframe for a dataset in a session"""
+    if session_id not in _session_dataframes:
+        _session_dataframes[session_id] = {}
+    _session_dataframes[session_id][dataset_id] = {
+        "frame": frame,
+        "metadata": metadata,
+        "timestamp": time.time(),
+    }
+
+
+def get_cached_dataframe(session_id: str, dataset_id: str) -> tuple[pd.DataFrame | None, dict[str, Any] | None]:
+    """Retrieve a cached dataframe for a dataset in a session. Returns (frame, metadata) or (None, None)"""
+    if session_id not in _session_dataframes:
+        return None, None
+    
+    cached = _session_dataframes[session_id].get(dataset_id)
+    if cached is None:
+        return None, None
+    
+    # Check if cache is still fresh (1 hour TTL)
+    if time.time() - cached["timestamp"] > 3600:
+        _session_dataframes[session_id].pop(dataset_id, None)
+        return None, None
+    
+    return cached["frame"], cached["metadata"]
 
 
 def metadata_document_text(dataset: dict[str, Any]) -> str:
@@ -496,6 +525,18 @@ def message_dataset_payload(dataset: dict[str, Any], rank: int) -> dict[str, Any
     return payload
 
 
+def strip_markdown_formatting(text: str) -> str:
+    """Remove markdown formatting (##, **, etc.) from text."""
+    import re
+    # Remove ## headers
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # Remove ** bold formatting
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    # Remove * italic formatting
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    return text.strip()
+
+
 def llm_summary(task: str, payload: dict[str, Any]) -> str | None:
     client = get_openai_client()
     if client is None:
@@ -505,7 +546,9 @@ def llm_summary(task: str, payload: dict[str, Any]) -> str | None:
         "You are an Indian public data assistant. "
         "Use only the facts in the payload. "
         "Do not invent datasets, links, or statistics. "
-        "Keep the answer concise, factual, and easy to scan."
+        "Keep the answer concise, factual, and easy to scan. "
+        "Do NOT use any markdown formatting like ##, **, [], or similar markup. "
+        "Write plain text responses only."
     )
     user_prompt = json.dumps({"task": task, "payload": payload}, ensure_ascii=False)
 
@@ -524,6 +567,7 @@ def llm_summary(task: str, payload: dict[str, Any]) -> str | None:
 
     content = response.choices[0].message.content if response.choices else None
     if isinstance(content, str):
+        content = strip_markdown_formatting(content)
         return content.strip() or None
     return None
 
@@ -574,6 +618,16 @@ GENERAL_PLATFORM_KEYWORDS = {
     "reliability",
     "data quality",
     "is data reliable",
+    "what is this platform",
+    "what is this",
+    "what is idh",
+    "tell me about this",
+    "tell me about platform",
+    "platform contains",
+    "sectors available",
+    "data structure",
+    "wtf",
+    "what the fuck",
 }
 
 # Category B: Dataset Discovery Questions
@@ -862,15 +916,15 @@ def is_platform_query(query: str, sector: str | None = None) -> bool:
 def get_restriction_message() -> str:
     """Generate a helpful rejection message for non-platform queries."""
     return (
-        "I'm a **Intelligent Data Hub Assistant** and can only help with dataset-related questions.\n\n"
-        "**I can help you with:**\n"
-        "📊 **Platform Questions**: What is Intelligent Data Hub? What data is available? Is it free?\n"
-        "🔍 **Discover Datasets**: Show datasets related to agriculture, healthcare, finance, etc.\n"
-        "📖 **Understand Data**: Explain dataset columns, sources, when last updated, structure\n"
-        "📈 **Analyze Data**: Find trends, compare values, show top states, identify patterns\n"
-        "💾 **Download & Visualize**: Export as CSV, create charts, visualize data\n"
-        "🎯 **Smart Insights**: Get dataset recommendations or simplified explanations\n\n"
-        "**Example questions:**\n"
+        "I'm an Intelligent Data Hub Assistant and can only help with dataset-related questions.\n\n"
+        "I can help you with:\n"
+        "📊 Platform Questions: What is Intelligent Data Hub? What data is available? Is it free?\n"
+        "🔍 Discover Datasets: Show datasets related to agriculture, healthcare, finance, etc.\n"
+        "📖 Understand Data: Explain dataset columns, sources, when last updated, structure\n"
+        "📈 Analyze Data: Find trends, compare values, show top states, identify patterns\n"
+        "💾 Download & Visualize: Export as CSV, create charts, visualize data\n"
+        "🎯 Smart Insights: Get dataset recommendations or simplified explanations\n\n"
+        "Example questions:\n"
         "• 'Show datasets related to agriculture'\n"
         "• 'What are the trends in crop production?'\n"
         "• 'Compare healthcare data between states'\n"
@@ -970,7 +1024,11 @@ def resolve_requested_dataset(
     sector: str | None = None,
     dataset_id: str | None = None,
 ) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if dataset_id:
+        logger.info(f"Resolving by explicit dataset_id: {dataset_id}")
         resolved_sector, dataset = get_dataset_by_id(dataset_id)
         if dataset is not None:
             enriched = enrich_dataset(dataset)
@@ -982,15 +1040,23 @@ def resolve_requested_dataset(
     last_matches = state.get("lastMatches") or []
     ordinal = parse_ordinal_reference(query)
     if ordinal and 1 <= ordinal <= len(last_matches):
+        logger.info(f"Resolving by ordinal reference: {ordinal}")
         selected = last_matches[ordinal - 1]
         return selected, last_matches
 
     if referenced_previous_dataset(query) and state.get("lastDataset"):
+        logger.info(f"Resolving by reference to previous dataset")
         return state["lastDataset"], last_matches
 
+    # Try hybrid retrieval for dataset discovery
+    logger.info(f"Performing hybrid dataset retrieval for query: {query[:100]}...")
     retrieved = hybrid_retrieve_datasets(query, sector=sector, limit=TOP_K_RESULTS)
+    
     if not retrieved:
+        logger.warning(f"No datasets found for query: {query[:100]}")
         return None, []
+    
+    logger.info(f"Found {len(retrieved)} dataset(s), returning top match")
     return retrieved[0], retrieved
 
 
@@ -1426,8 +1492,18 @@ def chatbot_response(
     sector: str | None = None,
     dataset_id: str | None = None,
     dataset_title: str | None = None,
+    user_email: str | None = None,
+    user_id: str | None = None,
 ) -> dict[str, Any]:
     from .dataset_chatbot_service import chatbot_response as dataset_chatbot_response
+    from .enhanced_chatbot_service import (
+        process_enhanced_query,
+        extract_sector_from_query,
+        extract_state_from_query,
+        format_enhanced_response,
+        QueryCategory,
+        classify_query_type,
+    )
 
     normalized_query = compact_text(query)
     active_session_id = session_id or str(uuid.uuid4())
@@ -1445,13 +1521,37 @@ def chatbot_response(
         return domain_restricted_response(active_session_id, normalized_query)
 
     normalized_sector = normalize_sector_key(sector) if sector and normalize_sector_key(sector) != "all" else None
+    
+    # Extract state and sector from query using enhanced extraction
+    extracted_sector = extract_sector_from_query(normalized_query)
+    extracted_state = extract_state_from_query(normalized_query)
+    
+    # Use provided sector or extracted sector
+    query_sector = normalized_sector or (normalize_sector_key(extracted_sector) if extracted_sector else None)
+    query_state = extracted_state
+    
+    # ========================================================================
+    # CLASSIFY QUERY TYPE (Category A-H)
+    # ========================================================================
+    query_category = classify_query_type(normalized_query)
+    
+    # Handle General Platform Questions (Category A) - No dataset retrieval needed
+    if query_category == QueryCategory.GENERAL_PLATFORM:
+        enhanced_result = process_enhanced_query(normalized_query)
+        response = format_enhanced_response(active_session_id, enhanced_result)
+        record_session_message(active_session_id, "assistant", response.get("content", ""))
+        response["history"] = _session_history[active_session_id]
+        return response
+    
+    # For other categories, try to find relevant datasets
     target_dataset, _known_matches = resolve_requested_dataset(
         normalized_query,
         active_session_id,
-        sector=normalized_sector,
+        sector=query_sector,
         dataset_id=dataset_id,
     )
 
+    # Category D: Data Analysis - needs dataset details
     if target_dataset and is_analysis_query(normalized_query, dataset_id=dataset_id):
         state = session_state(active_session_id)
         state["lastMatches"] = [target_dataset]
@@ -1461,33 +1561,89 @@ def chatbot_response(
             response = dataset_chatbot_response(
                 normalized_query,
                 session_id=active_session_id,
-                sector=target_dataset.get("sectorKey") or normalized_sector,
+                sector=target_dataset.get("sectorKey") or query_sector,
                 dataset_id=str(target_dataset.get("id") or dataset_id or ""),
                 dataset_title=dataset_title or target_dataset.get("title"),
+                user_email=user_email,
+                user_id=user_id,
             )
             if response.get("restricted") and "dataset api could not be reached" in normalize_search_text(response.get("content")):
                 return metadata_fallback_response(active_session_id, target_dataset)
             return response
-        except Exception:
+        except requests.RequestException as e:
+            # API connection error - log and provide helpful message
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"API error analyzing dataset {dataset_id}: {type(e).__name__}: {str(e)}")
             return analysis_unavailable_response(
                 active_session_id,
                 target_dataset,
-                "Dataset analysis is temporarily unavailable. Please retry in a moment.",
+                "Unable to fetch dataset from data.gov.in. The API may be temporarily unavailable or rate-limited. Please try again in a moment.",
+            )
+        except ValueError as e:
+            # Data validation error - log and provide helpful message
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Data validation error for dataset {dataset_id}: {str(e)}")
+            return analysis_unavailable_response(
+                active_session_id,
+                target_dataset,
+                str(e),  # Return the specific ValueError message to user
+            )
+        except Exception as e:
+            # Unexpected error - log details for debugging
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.exception(f"Unexpected error analyzing dataset {dataset_id}: {type(e).__name__}: {str(e)}")
+            error_details = traceback.format_exc()
+            logger.error(f"Full traceback:\n{error_details}")
+            
+            # Provide more specific error message based on error type
+            if "tooLarge" in str(e):
+                error_msg = f"Dataset is too large for analysis. {str(e)}"
+            elif "no records" in str(e).lower():
+                error_msg = "The dataset returned no data. This may mean the dataset is empty or the API connection failed."
+            elif "no column" in str(e).lower():
+                error_msg = "Could not detect columns in the dataset. The dataset format may not be supported."
+            else:
+                error_msg = f"Analysis failed: {str(e)}"
+            
+            return analysis_unavailable_response(
+                active_session_id,
+                target_dataset,
+                error_msg,
             )
 
-    retrieval = hybrid_retrieve_bundle(normalized_query, sector=normalized_sector, limit=TOP_K_RESULTS)
+    # Try hybrid retrieval for dataset discovery
+    retrieval = hybrid_retrieve_bundle(normalized_query, sector=query_sector, limit=TOP_K_RESULTS)
     matches = retrieval.get("results", [])
     total_count = int(retrieval.get("total") or len(matches))
 
     if matches:
-        return listing_response(active_session_id, normalized_query, matches, total_count)
+        # Use enhanced response for dataset discovery
+        if query_category == QueryCategory.DATASET_DISCOVERY:
+            enhanced_result = process_enhanced_query(
+                normalized_query,
+                sector=query_sector,
+                state=query_state,
+                matches=matches,
+                total_count=total_count,
+            )
+            response = format_enhanced_response(active_session_id, enhanced_result, matches=matches)
+            record_session_message(active_session_id, "assistant", response.get("content", ""))
+            response["history"] = _session_history[active_session_id]
+            return response
+        else:
+            return listing_response(active_session_id, normalized_query, matches, total_count)
 
+    # No matches found - try with state/sector filters
     state_filters = detect_query_states(normalize_search_text(normalized_query))
-    if normalized_sector or state_filters:
-        resolved_state = next(iter(state_filters), None)
+    if query_sector or query_state or state_filters:
+        resolved_state = query_state or next(iter(state_filters), None)
         return get_top_datasets(
             active_session_id,
-            normalized_sector or "all",
+            query_sector or "all",
             limit=TOP_K_RESULTS,
             state=resolved_state,
         )

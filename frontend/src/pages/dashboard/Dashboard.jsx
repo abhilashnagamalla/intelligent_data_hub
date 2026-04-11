@@ -6,6 +6,7 @@ import api from '../../api';
 import BackgroundFrame from '../../components/common/BackgroundFrame';
 import DomainCard from '../../components/domain/DomainCard';
 import { overviewPageBackground } from '../../constants/backgrounds';
+import { getCachedData, setCachedData } from '../../utils/dataCache';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -17,11 +18,25 @@ export default function Dashboard() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      
       try {
+        // Check cache first for 20 minutes
+        const cached = getCachedData('dashboard:domains');
+        if (cached) {
+          setDomains(cached);
+          setLoading(false);
+          return;
+        }
+
         const response = await api.get('/domains');
-        if (!cancelled) setDomains(response.data || []);
+        if (!cancelled) {
+          const data = response.data || [];
+          setDomains(data);
+          // Cache for 20 minutes
+          setCachedData('dashboard:domains', data, 20 * 60 * 1000);
+        }
       } catch (error) {
-        console.error(error);
+        console.error('Dashboard load error:', error);
         if (!cancelled) setDomains([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -57,7 +72,7 @@ export default function Dashboard() {
       contentClassName="space-y-8 p-4 sm:p-6 lg:p-8"
     >
       <div className="space-y-8">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-white bg-black/28 p-8 dark:border-gray-800 dark:bg-gray-950/92">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-white bg-black/28 p-8 dark:border-white dark:bg-gray-950/92">
           <div className="grid grid-cols-3 gap-6 text-center">
             <div>
               <div className="text-4xl font-black text-white">{domains.length}</div>
@@ -75,7 +90,7 @@ export default function Dashboard() {
         </motion.div>
 
         <section className="space-y-4">
-          <h2 className="rounded-2xl border-2 border-white bg-black/28 p-4 text-3xl font-black text-white dark:border-gray-800 dark:bg-gray-950/92 dark:text-white">{t('Explore Domains')}</h2>
+          <h2 className="rounded-2xl border-2 border-white bg-black/28 p-4 text-3xl font-black text-white dark:border-white dark:bg-gray-950/92 dark:text-white">{t('Explore Domains')}</h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {domains.map((domain) => (
               <DomainCard key={domain.sector} domain={domain} onClick={() => navigate(`/domain/${domain.sector}`)} />

@@ -1,9 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useContext } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Send, Bot, Loader2, X, Plus, MessageSquare, Trash2, Menu, AlertTriangle, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import api from '../../api';
+import { AuthContext } from '../../context/AuthContext';
+import {
+  getUserChats,
+  createChat,
+  updateChat,
+  addMessageToChat,
+  deleteChat,
+  updateChatTitle,
+  updateChatDataset,
+  syncLocalStorageChatsToFirebase,
+} from '../../services/chatService';
 
 const DEFAULT_CHAT_TITLE = 'New Chat';
 
@@ -26,6 +37,7 @@ function hydrateChats(chats) {
 }
 
 function readStoredChats() {
+  // Deprecated - kept for fallback only
   if (typeof window === 'undefined') return [];
 
   try {
@@ -42,6 +54,7 @@ function readStoredChats() {
 }
 
 function readStoredActiveChatId() {
+  // Deprecated - kept for fallback only
   if (typeof window === 'undefined') return '';
 
   try {
@@ -51,28 +64,25 @@ function readStoredActiveChatId() {
   }
 }
 
-function persistChats(chats) {
-  if (typeof window === 'undefined') return;
-
-  try {
-    window.localStorage.setItem('chatbot_sessions', JSON.stringify(chats));
-  } catch (_error) {
-    // Ignore storage quota/private mode errors and keep the UI responsive.
-  }
+// Firebase persistence removed - using cloud-based storage now
+// Keeping these for backward compatibility only
+function persistChats(_chats) {
+  // No-op - Firebase handles persistence
 }
 
-function persistActiveChatId(activeChatId) {
-  if (typeof window === 'undefined') return;
+function persistActiveChatId(_activeChatId) {
+  // No-op - Firebase handles persistence
+}
 
-  try {
-    if (activeChatId) {
-      window.localStorage.setItem('chatbot_active_id', activeChatId);
-    } else {
-      window.localStorage.removeItem('chatbot_active_id');
-    }
-  } catch (_error) {
-    // Ignore storage quota/private mode errors and keep the UI responsive.
-  }
+function stripMarkdownFormatting(text) {
+  if (!text) return text;
+  // Remove ## headers
+  text = text.replace(/^#{1,6}\s+/gm, '');
+  // Remove ** bold formatting
+  text = text.replace(/\*\*(.+?)\*\*/g, '$1');
+  // Remove * italic formatting
+  text = text.replace(/\*(.+?)\*/g, '$1');
+  return text;
 }
 
 function StructuredResult({ result }) {
@@ -102,30 +112,70 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
   const location = useLocation();
   const { sector: urlSector } = useParams();
   const messagesEndRef = useRef(null);
+  
+  // Get user from AuthContext
+  const { user, loading: authLoading } = useContext(AuthContext);
 
   const currentSector = propSector || urlSector || (location.pathname.match(/\/domain\/([^/]+)/)?.[1] ?? 'all');
   const sectorTitle = currentSector === 'all' ? 'General' : currentSector.charAt(0).toUpperCase() + currentSector.slice(1);
 
-  const [chats, setChats] = useState(() => readStoredChats());
-  const [activeChatId, setActiveChatId] = useState(() => readStoredActiveChatId());
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState('');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [datasetQuery, setDatasetQuery] = useState('');
   const [datasetResults, setDatasetResults] = useState([]);
   const [isSearchingDatasets, setIsSearchingDatasets] = useState(false);
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
+  const [chatsError, setChatsError] = useState(null);
 
   const activeChat = useMemo(() => chats.find((chat) => chat.id === activeChatId) || null, [chats, activeChatId]);
   const messages = activeChat?.messages || [];
   const selectedDataset = activeChat?.dataset || null;
 
+  // Load chats from Firebase when user is authenticated
   useEffect(() => {
-    persistChats(chats);
-  }, [chats]);
+    if (!authLoading && !user) {
+      setChatsError('Please log in to use the chatbot');
+      setIsLoadingChats(false);
+      return;
+    }
 
-  useEffect(() => {
-    persistActiveChatId(activeChatId);
-  }, [activeChatId]);
+    if (!authLoading && user) {
+      loadUserChats();
+    }
+  }, [authLoading, user]);
+
+  const loadUserChats = async () => {
+    try {
+      setIsLoadingChats(true);
+      setChatsError(null);
+      
+      const userChats = await getUserChats(user.id);
+      
+      // If no chats in Firebase, try to migrate from localStorage
+      if (userChats.length === 0) {
+        const migratedChats = await syncLocalStorageChatsToFirebase(user.id, user.email);
+        if (migratedChats.length > 0) {
+          setChats(userChats);
+          return;
+        }
+      }
+      
+      setChats(userChats);
+      
+      // Set active chat to the most recent one if available
+      if (userChats.length > 0 && !activeChatId) {
+        setActiveChatId(userChats[0].id);
+      }
+    } catch (error) {
+      console.error('[ChatbotDataset] Error loading chats:', error);
+      setChatsError('Failed to load chat history. Please try again.');
+    } finally {
+      setIsLoadingChats(false);
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -136,51 +186,52 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
     setDatasetResults([]);
   }, [activeChatId, activeChat?.dataset?.id]);
 
-  const buildEmptyChat = (title = DEFAULT_CHAT_TITLE) => ({
-    id: Date.now().toString(),
-    title,
-    sector: currentSector,
-    dataset: null,
-    messages: [],
-  });
-
-  const ensureActiveChat = () => {
+  const ensureActiveChat = async () => {
     if (activeChatId) {
       return activeChatId;
     }
 
-    const newChat = buildEmptyChat();
-    setChats((current) => [newChat, ...current]);
-    setActiveChatId(newChat.id);
-    return newChat.id;
+    try {
+      const newChat = await createChat(user.id, user.email, {
+        title: DEFAULT_CHAT_TITLE,
+        sector: currentSector,
+        dataset: null,
+      });
+      setChats((current) => [newChat, ...current]);
+      setActiveChatId(newChat.id);
+      return newChat.id;
+    } catch (error) {
+      console.error('[ChatbotDataset] Error creating new chat:', error);
+      alert('Failed to create new chat. Please try again.');
+      return null;
+    }
   };
 
-  const createNewChat = () => {
-    const newChat = buildEmptyChat();
-    setChats((current) => [newChat, ...current]);
-    setActiveChatId(newChat.id);
+  const createNewChat = async () => {
+    try {
+      const newChat = await createChat(user.id, user.email, {
+        title: DEFAULT_CHAT_TITLE,
+        sector: currentSector,
+        dataset: null,
+      });
+      setChats((current) => [newChat, ...current]);
+      setActiveChatId(newChat.id);
+    } catch (error) {
+      console.error('[ChatbotDataset] Error creating new chat:', error);
+      alert('Failed to create new chat. Please try again.');
+    }
   };
 
-  const deleteChat = (id, event) => {
+  const deleteChatHandler = async (id, event) => {
     event.stopPropagation();
-    setChats((current) => current.filter((chat) => chat.id !== id));
-    if (activeChatId === id) setActiveChatId('');
-  };
-
-  const updateChat = (chatId, updater) => {
-    setChats((current) => current.map((chat) => (chat.id === chatId ? updater(chat) : chat)));
-  };
-
-  const appendMessage = (chatId, message) => {
-    updateChat(chatId, (chat) => ({ ...chat, messages: [...chat.messages, message] }));
-  };
-
-  const setChatTitle = (chatId, title) => {
-    updateChat(chatId, (chat) => ({ ...chat, title: formatChatTitle(title) }));
-  };
-
-  const setChatDataset = (chatId, dataset) => {
-    updateChat(chatId, (chat) => ({ ...chat, dataset }));
+    try {
+      await deleteChat(id, user.id);
+      setChats((current) => current.filter((chat) => chat.id !== id));
+      if (activeChatId === id) setActiveChatId('');
+    } catch (error) {
+      console.error('[ChatbotDataset] Error deleting chat:', error);
+      alert('Failed to delete chat. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -229,32 +280,47 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
   }, [datasetQuery, activeChatId, currentSector, selectedDataset?.id, selectedDataset?.title]);
 
   const handleDatasetQueryChange = (event) => {
-    ensureActiveChat();
     setDatasetQuery(event.target.value);
   };
 
-  const selectDataset = (dataset) => {
-    const chatId = ensureActiveChat();
+  const selectDataset = async (dataset) => {
+    const chatId = activeChatId || (await ensureActiveChat());
+    if (!chatId) return;
+
     const selected = {
       id: dataset.id,
       title: dataset.title,
       sector: dataset.sectorKey || dataset.sector,
     };
-    setChatDataset(chatId, selected);
-    setDatasetQuery(selected.title);
-    setDatasetResults([]);
+    
+    try {
+      const updated = await updateChatDataset(chatId, user.id, selected);
+      setChats((current) =>
+        current.map((chat) => (chat.id === chatId ? updated : chat))
+      );
+      setDatasetQuery(selected.title);
+      setDatasetResults([]);
+    } catch (error) {
+      console.error('[ChatbotDataset] Error selecting dataset:', error);
+      alert('Failed to update dataset. Please try again.');
+    }
   };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
     const trimmedInput = input.trim();
 
-    const chatId = ensureActiveChat();
+    let chatId = activeChatId;
+    if (!chatId) {
+      chatId = await ensureActiveChat();
+      if (!chatId) return;
+    }
+
     const chat = chats.find((entry) => entry.id === chatId) || activeChat;
     const dataset = chat?.dataset || selectedDataset;
 
     if (!dataset?.id) {
-      appendMessage(chatId, {
+      const botMessage = {
         role: 'bot',
         content: 'Select a dataset before asking a question. This chatbot only answers dataset-specific questions.',
         restricted: true,
@@ -262,15 +328,44 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
         insights: [],
         result: null,
         timestamp: new Date().toLocaleTimeString(),
-      });
+      };
+      try {
+        const updated = await addMessageToChat(chatId, user.id, botMessage);
+        setChats((current) =>
+          current.map((c) => (c.id === chatId ? updated : c))
+        );
+      } catch (error) {
+        console.error('[ChatbotDataset] Error adding message:', error);
+      }
       return;
     }
 
     if (!chat?.messages?.length || chat?.title === DEFAULT_CHAT_TITLE) {
-      setChatTitle(chatId, trimmedInput);
+      try {
+        const titleUpdated = await updateChatTitle(chatId, user.id, trimmedInput);
+        setChats((current) =>
+          current.map((c) => (c.id === chatId ? titleUpdated : c))
+        );
+      } catch (error) {
+        console.error('[ChatbotDataset] Error updating chat title:', error);
+      }
     }
 
-    appendMessage(chatId, { role: 'user', content: trimmedInput, timestamp: new Date().toLocaleTimeString() });
+    const userMessage = {
+      role: 'user',
+      content: trimmedInput,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    
+    try {
+      const withUserMsg = await addMessageToChat(chatId, user.id, userMessage);
+      setChats((current) =>
+        current.map((c) => (c.id === chatId ? withUserMsg : c))
+      );
+    } catch (error) {
+      console.error('[ChatbotDataset] Error adding user message:', error);
+    }
+
     setInput('');
     setIsLoading(true);
 
@@ -278,12 +373,14 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
       const response = await api.post('/chatbot/query', {
         query: trimmedInput,
         session_id: chatId,
+        user_email: user.email,
+        user_id: user.id,
         sector: currentSector !== 'all' ? currentSector : null,
         dataset_id: dataset.id,
         dataset_title: dataset.title,
       });
 
-      appendMessage(chatId, {
+      const botMessage = {
         role: 'bot',
         content: response.data?.content || 'No response available.',
         restricted: !!response.data?.restricted,
@@ -291,17 +388,51 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
         insights: response.data?.insights || [],
         result: response.data?.result || null,
         timestamp: new Date().toLocaleTimeString(),
-      });
+      };
+
+      try {
+        const updated = await addMessageToChat(chatId, user.id, botMessage);
+        setChats((current) =>
+          current.map((c) => (c.id === chatId ? updated : c))
+        );
+      } catch (error) {
+        console.error('[ChatbotDataset] Error adding bot message:', error);
+      }
     } catch (_error) {
-      appendMessage(chatId, {
+      const errorDetails = _error?.response?.data?.detail || _error?.message || 'Unknown error';
+      const statusCode = _error?.response?.status || 'N/A';
+      
+      console.error('[ChatbotDataset] Full API error details:', {
+        message: _error?.message,
+        status: statusCode,
+        data: _error?.response?.data,
+        fullError: _error,
+      });
+      
+      const errorContent = statusCode === 500 
+        ? 'Backend error occurred. Please check server logs or try again later.'
+        : statusCode === 'N/A'
+        ? 'Network error: Cannot reach the server. Make sure the backend is running on port 8000.'
+        : `Error (${statusCode}): ${errorDetails}`;
+      
+      const errorMessage = {
         role: 'bot',
-        content: 'Sorry, something went wrong. Please try again.',
+        content: `Sorry, something went wrong. ${errorContent}`,
         restricted: false,
         matches: [],
         insights: [],
         result: null,
         timestamp: new Date().toLocaleTimeString(),
-      });
+      };
+      
+      try {
+        const updated = await addMessageToChat(chatId, user.id, errorMessage);
+        setChats((current) =>
+          current.map((c) => (c.id === chatId ? updated : c))
+        );
+      } catch (error) {
+        console.error('[ChatbotDataset] Error adding error message:', error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -324,6 +455,41 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
     onClose?.();
   };
 
+  // Show loading state if auth is loading or chats are loading
+  if (authLoading || isLoadingChats) {
+    return (
+      <div className="flex h-full min-h-[600px] w-full items-center justify-center bg-white dark:bg-gray-950 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+          <p className="text-sm text-gray-500">Loading chatbot...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if not authenticated
+  if (!user) {
+    return (
+      <div className="flex h-full min-h-[600px] w-full flex-col items-center justify-center bg-white dark:bg-gray-950 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl">
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Sign In Required</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 text-center max-w-sm">
+          Please sign in to use the dataset chatbot and access your chat history.
+        </p>
+      </div>
+    );
+  }
+
+  if (chatsError) {
+    return (
+      <div className="flex h-full min-h-[600px] w-full flex-col items-center justify-center bg-white dark:bg-gray-950 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl">
+        <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Error</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 text-center max-w-sm">{chatsError}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-[600px] w-full overflow-hidden bg-white dark:bg-gray-950 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl relative">
       <AnimatePresence>
@@ -344,7 +510,7 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
                       <div className="text-[10px] uppercase tracking-wide text-gray-400 truncate">{chat.dataset?.title || 'No dataset selected'}</div>
                     </div>
                   </div>
-                  <button onClick={(event) => deleteChat(chat.id, event)} className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950 transition-all"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={(event) => deleteChatHandler(chat.id, event)} className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-950 transition-all"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
@@ -433,7 +599,7 @@ export default function ChatbotDataset({ onClose, sector: propSector }) {
                       <AlertTriangle className="w-4 h-4" /> Dataset restriction active
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{stripMarkdownFormatting(message.content)}</div>
                   <StructuredResult result={message.result} />
                   {message.matches?.length > 0 && (
                     <div className="mt-4 space-y-2">
