@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useContext } from 'react';
+import { ThemeContext } from '../../context/ThemeContext';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie, Legend, LineChart, Line
@@ -8,7 +9,7 @@ import { Building2, MapPin, Hash, Award, BarChart3, PieChart as PieIcon, Downloa
 import { motion } from 'framer-motion';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899'];
-const labelStyle = { fill: '#6B7280', fontSize: 11, fontWeight: 600, fontFamily: 'Inter, sans-serif' };
+const getLabelStyle = (isDark) => ({ fill: isDark ? '#f1f5f9' : '#6B7280', fontSize: 11, fontWeight: isDark ? 600 : 500, fontFamily: 'Inter, sans-serif' });
 
 const SECTOR_KPI = ({ title, value, subtext, icon, colorClass }) => (
   <motion.div 
@@ -28,6 +29,7 @@ const SECTOR_KPI = ({ title, value, subtext, icon, colorClass }) => (
 
 const SectorVisualizer = ({ catalogs }) => {
   const { t } = useTranslation();
+  const { darkMode } = useContext(ThemeContext);
 
   // Aggressive name shortening for cleaner chart UI rendering
   const shortenName = (name, limit = 25) => {
@@ -229,7 +231,7 @@ const SectorVisualizer = ({ catalogs }) => {
           return (
             <div
               key={chart.id}
-              className={`bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all border border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-bottom-[50px] ${chart.type === 'pie' ? 'lg:col-span-2' : ''}`}
+              className={`bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all border border-gray-100 dark:border-gray-800 dark:bg-gray-950 animate-in fade-in slide-in-from-bottom-[50px] ${chart.type === 'pie' ? 'lg:col-span-2' : ''}`}
               style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'both' }}
             >
                {/* Chart Header */}
@@ -252,13 +254,13 @@ const SectorVisualizer = ({ catalogs }) => {
                         
                         {chart.layout === 'vertical' ? (
                           <>
-                            <XAxis type="number" axisLine={false} tickLine={false} tick={labelStyle} hide />
-                            <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={labelStyle} width={180} />
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={getLabelStyle(darkMode)} hide />
+                            <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={getLabelStyle(darkMode)} width={180} stroke={darkMode ? '#f1f5f9' : '#e5e7eb'} strokeWidth={darkMode ? 2 : 1} />
                           </>
                         ) : (
                           <>
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={labelStyle} height={60} tickMargin={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={labelStyle} width={40} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={getLabelStyle(darkMode)} height={60} tickMargin={10} stroke={darkMode ? '#f1f5f9' : '#e5e7eb'} strokeWidth={darkMode ? 2 : 1} />
+                            <YAxis axisLine={false} tickLine={false} tick={getLabelStyle(darkMode)} width={40} stroke={darkMode ? '#f1f5f9' : '#e5e7eb'} strokeWidth={darkMode ? 2 : 1} />
                           </>
                         )}
                         
@@ -275,9 +277,9 @@ const SectorVisualizer = ({ catalogs }) => {
                       </BarChart>
                     ) : chart.type === 'line' ? (
                       <LineChart data={chart.data} margin={{ left: 20, right: 40, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888815" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={labelStyle} tickMargin={15} />
-                        <YAxis axisLine={false} tickLine={false} tick={labelStyle} width={40} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "rgba(255,255,255,0.05)" : "#88888815"} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={getLabelStyle(darkMode)} tickMargin={15} stroke={darkMode ? '#f1f5f9' : '#e5e7eb'} strokeWidth={darkMode ? 2 : 1} />
+                        <YAxis axisLine={false} tickLine={false} tick={getLabelStyle(darkMode)} width={40} stroke={darkMode ? '#f1f5f9' : '#e5e7eb'} strokeWidth={darkMode ? 2 : 1} />
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#111827', border: 'none', borderRadius: '1.2rem', color: '#fff', padding: '16px', fontWeight: 'bold' }} 
                         />
@@ -297,7 +299,7 @@ const SectorVisualizer = ({ catalogs }) => {
                            ))}
                         </Pie>
                         <Tooltip contentStyle={{ backgroundColor: '#111827', border: 'none', borderRadius: '1.2rem', color: '#fff', padding: '15px', fontWeight: 'bold' }} />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontWeight: 600, fontSize: '13px', color: '#4B5563' }} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontWeight: 600, fontSize: '13px', color: darkMode ? '#94a3b8' : '#4B5563' }} />
                       </PieChart>
                     )}
                   </ResponsiveContainer>

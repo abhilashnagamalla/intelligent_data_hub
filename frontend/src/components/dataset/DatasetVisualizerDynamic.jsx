@@ -7,6 +7,8 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
+import { useContext } from 'react';
+import { ThemeContext } from '../../context/ThemeContext';
 
 function formatMetricValue(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -39,6 +41,7 @@ function ChartTooltip({ active, payload, chart }) {
 }
 
 export default function DatasetVisualizerDynamic({ visualization, insights = [] }) {
+  const { darkMode } = useContext(ThemeContext);
   if (!visualization) {
     return <div className="rounded-2xl border border-gray-200 p-8 text-gray-500 dark:border-gray-800">Visualization is not available yet.</div>;
   }
@@ -74,10 +77,10 @@ export default function DatasetVisualizerDynamic({ visualization, insights = [] 
         </p>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 h-[420px]">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 h-[420px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chart.data} margin={{ top: 12, right: 24, left: 8, bottom: chartBottomMargin }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
+          <BarChart data={chart.data} margin={{ top: 12, right: 24, left: 16, bottom: chartBottomMargin }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#334155' : '#d1d5db'} />
             <XAxis
               dataKey={chart.xKey}
               interval={0}
@@ -85,16 +88,22 @@ export default function DatasetVisualizerDynamic({ visualization, insights = [] 
               textAnchor={rotateLabels ? 'end' : 'middle'}
               height={xAxisHeight}
               tickMargin={10}
-              label={{ value: chart.xLabel, position: 'bottom', offset: 14 }}
+              label={{ value: chart.xLabel, position: 'bottom', offset: 14, fill: darkMode ? '#f1f5f9' : '#1e293b', fontWeight: 700, fontSize: 13 }}
+              stroke={darkMode ? '#f1f5f9' : '#1e293b'}
+              strokeWidth={2}
+              tick={{ fill: darkMode ? '#f1f5f9' : '#475569', fontSize: 12, fontWeight: 600 }}
             />
             <YAxis
               tickFormatter={formatMetricValue}
-              label={{ value: chart.yLabel, angle: -90, position: 'insideLeft' }}
+              label={{ value: chart.yLabel, angle: -90, position: 'insideLeft', fill: darkMode ? '#f1f5f9' : '#1e293b', fontWeight: 700, fontSize: 13 }}
+              stroke={darkMode ? '#f1f5f9' : '#1e293b'}
+              strokeWidth={2}
+              tick={{ fill: darkMode ? '#f1f5f9' : '#475569', fontSize: 12, fontWeight: 600 }}
             />
             <Tooltip content={<ChartTooltip chart={chart} />} />
             <Bar
               dataKey={chart.yKey}
-              fill={chart.type === 'histogram' ? '#111827' : '#16a34a'}
+              fill={chart.type === 'histogram' ? (darkMode ? '#3b82f6' : '#111827') : '#10b981'}
               radius={[8, 8, 0, 0]}
             />
           </BarChart>

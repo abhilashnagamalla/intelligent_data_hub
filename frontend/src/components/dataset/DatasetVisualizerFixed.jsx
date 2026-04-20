@@ -14,6 +14,8 @@ import {
   YAxis,
 } from "recharts";
 import { ChevronDown, ChevronUp, Info, Layers } from "lucide-react";
+import { useContext } from "react";
+import { ThemeContext } from "../../context/ThemeContext";
 
 /* ------------------------------------------------------------------ */
 /*  Custom tooltip – shows fullLabel on hover for numeric / long labels */
@@ -206,6 +208,7 @@ function getBarColor(entry, index) {
 /* ------------------------------------------------------------------ */
 export default function DatasetVisualizerFixed({ visualization, insights = [] }) {
   const { t } = useTranslation();
+  const { darkMode } = useContext(ThemeContext);
 
   if (!visualization) {
     return (
@@ -273,16 +276,16 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
       </div>
 
       {/* Chart area */}
-      <div className="rounded-3xl border-2 border-black bg-white shadow-sm dark:border-white h-[420px] p-4">
+      <div className="rounded-3xl border-2 border-black bg-white shadow-sm dark:border-white h-[420px] p-4 dark:bg-gray-950">
         <ResponsiveContainer width="100%" height="100%">
           {chart.type === "line" ? (
             <AreaChart data={chart.data} margin={{ top: 12, right: 16, left: 4, bottom: chartBottomMargin }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
-              <XAxis dataKey={chart.xKey} tick={{ fontSize: 12 }} tickMargin={10} height={xAxisHeight}>
-                {chart.xLabel && <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />}
+              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#334155" : "var(--border-subtle)"} />
+              <XAxis dataKey={chart.xKey} tick={{ fontSize: 12, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 600 }} tickMargin={10} height={xAxisHeight} stroke={darkMode ? "#f1f5f9" : "#94a3b8"} strokeWidth={2}>
+                {chart.xLabel && <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 13, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 700 }} />}
               </XAxis>
-              <YAxis tick={{ fontSize: 12 }}>
-                {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--text-secondary)", textAnchor: "middle" }} />}
+              <YAxis tick={{ fontSize: 12, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 600 }} stroke={darkMode ? "#f1f5f9" : "#94a3b8"} strokeWidth={2}>
+                {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 13, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", textAnchor: "middle", fontWeight: 700 }} />}
               </YAxis>
               <Tooltip content={<ChartTooltip labelMapping={chart.labelMapping} />} />
               <Area
@@ -295,20 +298,22 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
             </AreaChart>
           ) : chart.type === "histogram" ? (
             <BarChart data={chart.data} margin={{ top: 12, right: 16, left: 4, bottom: chartBottomMargin }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#334155" : "var(--border-subtle)"} />
               <XAxis
                 dataKey={chart.xKey}
                 interval={0}
                 angle={rotateXAxis ? -25 : 0}
                 textAnchor={rotateXAxis ? "end" : "middle"}
                 height={xAxisHeight}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 600 }}
                 tickMargin={10}
+                stroke={darkMode ? "#f1f5f9" : "#94a3b8"}
+                strokeWidth={2}
               >
-                {chart.xLabel && <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />}
+                {chart.xLabel && <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 13, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 700 }} />}
               </XAxis>
-              <YAxis tick={{ fontSize: 12 }}>
-                {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--text-secondary)", textAnchor: "middle" }} />}
+              <YAxis tick={{ fontSize: 12, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 600 }} stroke={darkMode ? "#f1f5f9" : "#94a3b8"} strokeWidth={2}>
+                {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 13, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", textAnchor: "middle", fontWeight: 700 }} />}
               </YAxis>
               <Tooltip content={<ChartTooltip labelMapping={chart.labelMapping} />} />
               <Bar dataKey={chart.yKey} fill="var(--brand-accent)" radius={[8, 8, 0, 0]} />
@@ -316,22 +321,24 @@ export default function DatasetVisualizerFixed({ visualization, insights = [] })
           ) : (
             /* Bar chart — default */
             <BarChart data={chart.data} margin={{ top: 12, right: 16, left: 4, bottom: chartBottomMargin }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#334155" : "var(--border-subtle)"} />
               <XAxis
                 dataKey={chart.xKey}
                 interval={0}
                 angle={rotateXAxis ? -25 : 0}
                 textAnchor={rotateXAxis ? "end" : "middle"}
                 height={xAxisHeight}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 600 }}
                 tickMargin={10}
+                stroke={darkMode ? "#f1f5f9" : "#94a3b8"}
+                strokeWidth={2}
               >
                 {chart.xLabel && !hasLabelMapping && (
-                  <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 12, fill: "var(--text-secondary)" }} />
+                  <Label value={chart.xLabel} position="bottom" offset={14} style={{ fontSize: 13, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 700 }} />
                 )}
               </XAxis>
-              <YAxis tick={{ fontSize: 12 }}>
-                {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--text-secondary)", textAnchor: "middle" }} />}
+              <YAxis tick={{ fontSize: 12, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", fontWeight: 600 }} stroke={darkMode ? "#f1f5f9" : "#94a3b8"} strokeWidth={2}>
+                {chart.yLabel && <Label value={chart.yLabel} angle={-90} position="insideLeft" style={{ fontSize: 13, fill: darkMode ? "#f1f5f9" : "var(--text-secondary)", textAnchor: "middle", fontWeight: 700 }} />}
               </YAxis>
               <Tooltip content={<ChartTooltip labelMapping={chart.labelMapping} />} />
               <Bar dataKey={chart.yKey} radius={[8, 8, 0, 0]}>

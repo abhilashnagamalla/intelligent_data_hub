@@ -50,6 +50,19 @@ DATASET_QUERY_TERMS = {
     "summary",
     "trend",
 }
+GENERIC_GREETINGS = {
+    "hi",
+    "hello",
+    "hey",
+    "howdy",
+    "greetings",
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "hi there",
+    "hello there",
+}
+
 INTENT_KEYWORDS = {
     "mean": {"average", "avg", "mean"},
     "max": {"highest", "largest", "maximum", "max", "peak"},
@@ -97,10 +110,10 @@ def fuzzy_match_keyword(text: str, keyword_set: set[str], cutoff: float = 0.6) -
     """Check if text fuzzy-matches any keyword in the set (for typo tolerance).
     
     Examples:
-    - \"fetures\" matches \"features\" (typo)
-    - \"colums\" matches \"columns\" (typo)
-    - \"insihgts\" matches \"insights\" (typo)
-    \"\"\"
+    - "features" matches "features" (typo)
+    - "columns" matches "columns" (typo)
+    - "insights" matches "insights" (typo)
+    """
     normalized = normalize_search_text(text).split()
     
     for word in normalized:
@@ -116,51 +129,39 @@ def fuzzy_match_keyword(text: str, keyword_set: set[str], cutoff: float = 0.6) -
     return False
 
 
-def clarification_response(session_id: str, query: str, query_type: str = \"ambiguous\") -> dict[str, Any]:
-    \"\"\"Provide a clarification prompt when query intent is ambiguous.\"\"\"
-    if query_type == \"ambiguous\":
+def clarification_response(session_id: str, query: str, query_type: str = "ambiguous") -> dict[str, Any]:
+    """Provide a clarification prompt when query intent is ambiguous."""
+    if query_type == "ambiguous":
         answer = (
-            f\"I'm not sure what you're asking about '{query}'. Could you clarify?\
-\
-\"
-            \"Are you asking for:\
-\"
-            \"• **Features/Columns** - List of column names and first row data\
-\"
-            \"• **Insights** - Summary stats, min/max values, trends, anomalies\
-\"
-            \"• **Specific metric** - Max/min value, comparison between columns\
-\
-\"
-            \"Please rephrase using words like: features, columns, insights, max, min, compare, etc.\"
+            f"I'm not sure what you're asking about '{query}'. Could you clarify?\n\n"
+            "Are you asking for:\n"
+            "• **Features/Columns** - List of column names and first row data\n"
+            "• **Insights** - Summary stats, min/max values, trends, anomalies\n"
+            "• **Specific metric** - Max/min value, comparison between columns\n\n"
+            "Please rephrase using words like: features, columns, insights, max, min, compare, etc."
         )
-    elif query_type == \"no_dataset\":
-        answer = \"Please select a dataset first by saying something like 'show datasets related to agriculture' or 'tell me about census data'.\"
-    elif query_type == \"error\":
+    elif query_type == "no_dataset":
+        answer = "Please select a dataset first by saying something like 'show datasets related to agriculture' or 'tell me about census data'."
+    elif query_type == "error":
         answer = (
-            \"Something went wrong analyzing this query. Could you try:\
-\"
-            \"• Checking the spelling (e.g., 'features' not 'fetures')\
-\"
-            \"• Being more specific about what you want\
-\"
-            \"• Selecting a dataset first\
-\
-\"
-            \"What would you like to know about the dataset?\"
+            "Something went wrong analyzing this query. Could you try:\n"
+            "• Checking the spelling (e.g., 'features' not 'fetures')\n"
+            "• Being more specific about what you want\n"
+            "• Selecting a dataset first\n\n"
+            "What would you like to know about the dataset?"
         )
     else:
-        answer = \"I didn't quite understand that. Could you rephrase your question?\"
+        answer = "I didn't quite understand that. Could you rephrase your question?"
     
-    record_session_message(session_id, \"assistant\", answer)
+    record_session_message(session_id, "assistant", answer)
     return {
-        \"sessionId\": session_id,
-        \"restricted\": False,
-        \"content\": answer,
-        \"matches\": [],
-        \"insights\": [],
-        \"result\": None,
-        \"history\": _session_history[session_id],
+        "sessionId": session_id,
+        "restricted": False,
+        "content": answer,
+        "matches": [],
+        "insights": [],
+        "result": None,
+        "history": _session_history[session_id],
     }
 
 
@@ -270,6 +271,12 @@ def filter_columns_exclude_serial(columns: list[str]) -> list[str]:
     return [col for col in columns if not is_serial_id_column(col)]
 
 
+def is_greeting(query: str) -> bool:
+    """Check if query is a simple greeting."""
+    normalized = normalize_search_text(query).lower().strip()
+    return normalized in GENERIC_GREETINGS
+
+
 def is_dataset_question(query: str, intent: str, matched_columns: list[str]) -> bool:
     normalized_query = normalize_search_text(query)
     if intent != "summary":
@@ -278,6 +285,87 @@ def is_dataset_question(query: str, intent: str, matched_columns: list[str]) -> 
         return True
     return any(term in normalized_query for term in DATASET_QUERY_TERMS)
 
+
+
+# ============================================================================
+# NATURAL LANGUAGE TO DATA FILTERS
+# ============================================================================
+
+def filter_records_by_query(records, query, columns):
+    """Filter records based on mentions of states, years, or other entities in the query."""
+    from app.services.dataset_catalog import detect_query_states, RAW_STATE_FILTER_ALIASES
+    
+    normalized = normalize_search_text(query).lower()
+    filtered = records
+    
+    # 1. State Filtering
+    states = detect_query_states(query)
+    if states:
+        state_code = next(iter(states))
+        # Find column that might contain state names
+        state_cols = [c for c in columns if any(keyword in c.lower() for keyword in ["state", "province", "region"])]
+        if state_cols:
+            state_col = state_cols[0]
+            # Try matching state code or name
+            state_aliases = RAW_STATE_FILTER_ALIASES.get(state_code, {state_code})
+            filtered = [r for r in filtered if any(alias.lower() in str(r.get(state_col)).lower() for alias in state_aliases)]
+            logger.info(f"Filtered records by state: {state_code} ({len(filtered)} rows remaining)")
+
+    # 2. Year Filtering
+    year_match = re.search(r"\b(20\d{2}|19\d{2})\b", normalized)
+    if year_match:
+        year_str = year_match.group(0)
+        date_cols = detect_date_columns(records, columns)
+        if date_cols:
+            date_col = date_cols[0]
+            filtered = [r for r in filtered if year_str in str(r.get(date_col))]
+            logger.info(f"Filtered records by year: {year_str} ({len(filtered)} rows remaining)")
+            
+    return filtered
+
+
+# ============================================================================
+# ADVANCED ANALYTICS (CORRELATION, GROWTH, ANOMALIES, TOP-N)
+# ============================================================================
+
+def calculate_correlation(records, col1, col2):
+    """Calculate Pearson correlation coefficient between two columns."""
+    v1 = [safe_float(r.get(col1)) for r in records if r.get(col1) is not None]
+    v2 = [safe_float(r.get(col2)) for r in records if r.get(col2) is not None]
+    
+    if len(v1) < 2 or len(v2) < 2 or len(v1) != len(v2):
+        return None
+        
+    try:
+        mean1 = sum(v1) / len(v1)
+        mean2 = sum(v2) / len(v2)
+        num = sum((x - mean1) * (y - mean2) for x, y in zip(v1, v2))
+        den = (sum((x - mean1)**2 for x in v1) * sum((y - mean2)**2 for y in v2))**0.5
+        return num / den if den != 0 else 0
+    except:
+        return None
+
+def detect_anomalies_iqr(records, column):
+    """Detect anomalies using IQR method."""
+    values = sorted([v for v in [safe_float(r.get(column)) for r in records] if v is not None])
+    if len(values) < 4:
+        return []
+    q1 = values[len(values)//4]
+    q3 = values[3*len(values)//4]
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+    return [v for v in values if v < lower_bound or v > upper_bound]
+
+def suggest_visualization(intent, columns, date_columns):
+    """Suggest best chart type based on intent and data types."""
+    if intent == "trend" or (date_columns and intent in {"mean", "max", "min"}):
+        return {"type": "line", "x_axis": date_columns[0] if date_columns else "time", "y_axis": columns[0] if columns else "value"}
+    if intent in {"compare", "max", "min"}:
+        return {"type": "bar", "x_axis": "category", "y_axis": columns[0] if columns else "value"}
+    if intent == "count":
+        return {"type": "pie", "x_axis": "label", "y_axis": "count"}
+    return {"type": "table"}
 
 def detect_date_columns(records: list[dict[str, Any]], columns: list[str]) -> list[str]:
     date_columns: list[str] = []
@@ -434,6 +522,8 @@ def structured_result(
     columns: list[str] | None = None,
     metrics: list[dict[str, str]] | None = None,
     observations: list[str] | None = None,
+    explanation: str | None = None,
+    visualization: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "intent": intent,
@@ -443,6 +533,8 @@ def structured_result(
         "metrics": metrics or [],
         "observations": observations or [],
         "answer": answer,
+        "explanation": explanation,
+        "visualization": visualization,
     }
 
 
@@ -514,22 +606,13 @@ def summary_response(context: dict[str, Any], numeric_columns: list[str], date_c
     categorical_columns = detect_categorical_columns(records, columns, numeric_columns)
 
     answer = (
-        f"**Dataset Overview**: {dataset['title']}
-
-"
-        f"**Key Metrics:**
-"
-        f"- Rows: {dataset['rows']:,}
-"
-        f"- Columns: {dataset['columns']:,}
-"
-        f"- Numeric columns: {len(numeric_columns)}
-"
-        f"- Time columns: {len(date_columns)}
-
-"
-        f"**Column Names:**
-"
+        f"**Dataset Overview**: {dataset['title']}\n\n"
+        f"**Key Metrics:**\n"
+        f"- Rows: {dataset['rows']:,}\n"
+        f"- Columns: {dataset['columns']:,}\n"
+        f"- Numeric columns: {len(numeric_columns)}\n"
+        f"- Time columns: {len(date_columns)}\n\n"
+        f"**Column Names:**\n"
         f"{', '.join(columns)}"
     )
     
@@ -563,6 +646,8 @@ def summary_response(context: dict[str, Any], numeric_columns: list[str], date_c
     anomaly_insights = detect_anomalies(records, columns)
     observations.extend(year_insights + anomaly_insights)
 
+    viz = suggest_visualization("summary", numeric_columns, date_columns)
+    
     return structured_result(
         intent="summary",
         dataset=dataset,
@@ -576,6 +661,8 @@ def summary_response(context: dict[str, Any], numeric_columns: list[str], date_c
             {"label": "Time columns", "value": str(len(date_columns))},
         ],
         observations=observations,
+        explanation=f"Analyzed {len(records):,} rows and {len(columns):,} columns. Identified {len(numeric_columns)} numeric and {len(date_columns)} temporal fields.",
+        visualization=viz,
     )
 
 
@@ -589,10 +676,11 @@ def column_response(context: dict[str, Any], matched_columns: list[str], numeric
     filtered_matched = [col for col in matched_columns if col in filtered_columns]
 
     if not filtered_matched:
-        answer = f"{dataset['title']} contains {len(filtered_columns):,} data columns (excluding ID/serial columns).
-
-**Column Names:**
-" + ", ".join(filtered_columns)
+        answer = (
+            f"{dataset['title']} contains {len(filtered_columns):,} data columns (excluding ID/serial columns).\n\n"
+            f"**Column Names:**\n"
+            f"{', '.join(filtered_columns)}"
+        )
         sample_pairs = preview_row_pairs(records, filtered_columns)
         
         observations = [f"Total data columns: {len(filtered_columns)}"]
@@ -907,10 +995,10 @@ def year_wise_metric_response(
     numeric_columns: list[str],
     date_columns: list[str],
 ) -> dict[str, Any] | None:
-    \"\"\"Handle queries like 'max value of column on 2020' with year filtering.\"\"\"
-    dataset = context[\"dataset\"]
-    records = context[\"records\"]
-    columns = context[\"columns\"]
+    """Handle queries like 'max value of column on 2020' with year filtering."""
+    dataset = context["dataset"]
+    records = context["records"]
+    columns = context["columns"]
     
     if not date_columns or not numeric_columns:
         return None
@@ -933,29 +1021,29 @@ def year_wise_metric_response(
             if record_year == year_value:
                 val = safe_float(record.get(feature_name))
                 if val is not None:
-                    year_filtered.append({\"value\": val, \"record\": record})
+                    year_filtered.append({"value": val, "record": record})
     
     if not year_filtered:
         return None
     
-    if intent in {\"max\", \"min\"}:
-        selected = max(year_filtered, key=lambda x: x[\"value\"]) if intent == \"max\" else min(year_filtered, key=lambda x: x[\"value\"])
-        metric_value = selected[\"value\"]
-        metric_label = \"Maximum\" if intent == \"max\" else \"Minimum\"
-        answer = f\"The {metric_label.lower()} value of '{feature_name}' in year {year_value} is {format_metric_value(metric_value)}.\"
+    if intent in {"max", "min"}:
+        selected = max(year_filtered, key=lambda x: x["value"]) if intent == "max" else min(year_filtered, key=lambda x: x["value"])
+        metric_value = selected["value"]
+        metric_label = "Maximum" if intent == "max" else "Minimum"
+        answer = f"The {metric_label.lower()} value of '{feature_name}' in year {year_value} is {format_metric_value(metric_value)}."
         
         return structured_result(
             intent=intent,
             dataset=dataset,
             answer=answer,
-            title=f\"{metric_label} of {feature_name} in {year_value}\",
+            title=f"{metric_label} of {feature_name} in {year_value}",
             columns=[feature_name, date_col],
             metrics=[
-                {\"label\": metric_label, \"value\": format_metric_value(metric_value)},
-                {\"label\": \"Year\", \"value\": year_value},
-                {\"label\": \"Records analyzed\", \"value\": f\"{len(year_filtered)}\"},
+                {"label": metric_label, "value": format_metric_value(metric_value)},
+                {"label": "Year", "value": year_value},
+                {"label": "Records analyzed", "value": f"{len(year_filtered)}"},
             ],
-            observations=[f\"Based on {len(year_filtered)} records from {year_value}.\"],
+            observations=[f"Based on {len(year_filtered)} records from {year_value}."],
         )
     
     return None
@@ -966,10 +1054,10 @@ def feature_comparison_response(
     query: str,
     numeric_columns: list[str],
 ) -> dict[str, Any] | None:
-    \"\"\"Handle queries asking for differences between features or years.\"\"\"
-    dataset = context[\"dataset\"]
-    records = context[\"records\"]
-    columns = context[\"columns\"]
+    """Handle queries asking for differences between features or years."""
+    dataset = context["dataset"]
+    records = context["records"]
+    columns = context["columns"]
     
     if not numeric_columns or len(numeric_columns) < 2:
         return None
@@ -1002,38 +1090,39 @@ def feature_comparison_response(
     difference = mean2 - mean1
     percent_diff = (difference / mean1 * 100) if mean1 != 0 else 0
     
-    answer = f\"Comparing '{col1}' and '{col2}': Mean of '{col1}' is {format_metric_value(mean1)}, mean of '{col2}' is {format_metric_value(mean2)}. Difference: {format_metric_value(difference)} ({percent_diff:+.1f}%).\"
+    answer = f"Comparing '{col1}' and '{col2}': Mean of '{col1}' is {format_metric_value(mean1)}, mean of '{col2}' is {format_metric_value(mean2)}. Difference: {format_metric_value(difference)} ({percent_diff:+.1f}%)."
     
     return structured_result(
-        intent=\"comparison\",
+        intent="comparison",
         dataset=dataset,
         answer=answer,
-        title=f\"Comparison: {col1} vs {col2}\",
+        title=f"Comparison: {col1} vs {col2}",
         columns=[col1, col2],
         metrics=[
-            {\"label\": f\"{col1} Mean\", \"value\": format_metric_value(mean1)},
-            {\"label\": f\"{col2} Mean\", \"value\": format_metric_value(mean2)},
-            {\"label\": \"Difference\", \"value\": format_metric_value(difference)},
-            {\"label\": \"Percent Change\", \"value\": f\"{percent_diff:+.1f}%\"},
+            {"label": f"{col1} Mean", "value": format_metric_value(mean1)},
+            {"label": f"{col2} Mean", "value": format_metric_value(mean2)},
+            {"label": "Difference", "value": format_metric_value(difference)},
+            {"label": "Percent Change", "value": f"{percent_diff:+.1f}%"},
         ],
         observations=[
-            f\"{col1}: min={format_metric_value(min(vals1))}, max={format_metric_value(max(vals1))}\",
-            f\"{col2}: min={format_metric_value(min(vals2))}, max={format_metric_value(max(vals2))}\",
+            f"{col1}: min={format_metric_value(min(vals1))}, max={format_metric_value(max(vals1))}",
+            f"{col2}: min={format_metric_value(min(vals2))}, max={format_metric_value(max(vals2))}",
         ],
     )
 
 
 def restriction_response(session_id: str, message: str) -> dict[str, Any]:
-    record_session_message(session_id, \"assistant\", message)
+    record_session_message(session_id, "assistant", message)
     return {
-        \"sessionId\": session_id,
-        \"restricted\": True,
-        \"content\": message,
-        \"matches\": [],
-        \"insights\": [],
-        \"result\": None,
-        \"history\": _session_history[session_id],
+        "sessionId": session_id,
+        "restricted": True,
+        "content": message,
+        "matches": [],
+        "insights": [],
+        "result": None,
+        "history": _session_history[session_id],
     }
+
 
 
 def answer_response(session_id: str, result: dict[str, Any]) -> dict[str, Any]:
@@ -1158,13 +1247,40 @@ def chatbot_response(
     try:
         columns = context["columns"]
         records = context["records"]
+        # Apply Natural Language Filters
+        filtered_records = filter_records_by_query(records, query, columns)
+        filter_count = len(records) - len(filtered_records)
+        if filter_count > 0:
+            context["records"] = filtered_records
+            records = filtered_records
+            logger.info(f"Applied dynamic filters based on query. Excluded {filter_count} rows.")
+
         numeric_columns = detect_numeric_columns(records, columns)
         date_columns = detect_date_columns(records, columns)
         matched_columns = matched_columns_from_query(query, columns)
         intent = detect_intent(query)
 
+        if is_greeting(query):
+            return {
+                "sessionId": active_session_id,
+                "restricted": False,
+                "content": f"Hello! I am the Dataset Chatbot. I can help you analyze '{dataset_title or dataset_id}'. You can ask me about its features, summary, trends, or specific metrics like max/min values.",
+                "matches": [],
+                "insights": [],
+                "result": None,
+                "history": _session_history[active_session_id],
+            }
+
         if not is_dataset_question(query, intent, matched_columns):
-            return restriction_response(active_session_id, DATASET_RESTRICTION_MESSAGE)
+            return {
+                "sessionId": active_session_id,
+                "restricted": False,
+                "content": f"I can only help with questions about the dataset '{dataset_title or dataset_id}'. For this data, I can tell you about its columns, provide a preview, or calculate statistics like average, max, and min. What would you like to know?",
+                "matches": [],
+                "insights": [],
+                "result": None,
+                "history": _session_history[active_session_id],
+            }
 
         # Enhanced query handling for specific patterns with intent detection
         result = None

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
 import { Send, Bot, Loader2, X, Plus, MessageSquare, Trash2, Menu, AlertTriangle, ArrowUpRight } from 'lucide-react';
@@ -357,17 +357,6 @@ export default function Chatbot({ onClose, sector: propSector }) {
                             >
                               {match.kind === 'sector' ? 'Open sector' : 'Open dataset'}
                             </button>
-                            {match.sourceUrl && (
-                              <a
-                                href={match.sourceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-black hover:text-black dark:border-gray-700 dark:text-gray-200 dark:hover:border-white dark:hover:text-white"
-                              >
-                                Source link
-                                <ArrowUpRight className="h-3.5 w-3.5" />
-                              </a>
-                            )}
                           </div>
                         </div>
                       ))}

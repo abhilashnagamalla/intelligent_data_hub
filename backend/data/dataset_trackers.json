@@ -5,7 +5,7 @@
   },
   "agriculture:0accb56b-525f-4408-a45b-67d4bd25bdc2": {
     "downloads": 2,
-    "views": 33
+    "views": 37
   },
   "agriculture:1d4f9533-4ab3-4b45-9d7a-9f73d7812c4c": {
     "downloads": 0,
@@ -109,7 +109,7 @@
   },
   "census:4d936669-40d2-4740-9777-3206650e0edc": {
     "downloads": 1,
-    "views": 8
+    "views": 9
   },
   "census:59ae9285-8aef-4683-9421-9d6d92f2bfa4": {
     "downloads": 1,
@@ -141,7 +141,11 @@
   },
   "education:49a42cbd-44c4-4a2d-a133-9d7259737103": {
     "downloads": 0,
-    "views": 4
+    "views": 6
+  },
+  "education:53fe25e9-2c0e-4ae1-b6ab-ab6c44d58dc6": {
+    "downloads": 0,
+    "views": 1
   },
   "education:6fc89278-14fd-4538-8be1-90e3158e82d0": {
     "downloads": 0,
@@ -155,6 +159,10 @@
     "downloads": 0,
     "views": 3
   },
+  "finance:866db500-8701-4188-b061-44b9d6294bd2": {
+    "downloads": 0,
+    "views": 1
+  },
   "finance:a71f2667-7980-413e-b6c4-64b11846bdae": {
     "downloads": 0,
     "views": 4
@@ -165,7 +173,7 @@
   },
   "finance:c5795094-91a9-449e-9652-cbffbff6e330": {
     "downloads": 0,
-    "views": 3
+    "views": 5
   },
   "finance:df42edbe-90df-408f-81e0-41e5d153afc0": {
     "downloads": 0,
@@ -190,6 +198,10 @@
   "health:8ee4400d-7f8b-465f-938f-c1ad3af9b0db": {
     "downloads": 0,
     "views": 5
+  },
+  "health:8f72a9d1-d737-4c0b-ae0a-d12852fda9b7": {
+    "downloads": 0,
+    "views": 1
   },
   "health:b6e37ccd-e17b-455a-bfe4-edb9923e5b21": {
     "downloads": 0,
@@ -217,7 +229,7 @@
   },
   "health:f55f64f0-3511-475a-9975-82485150933b": {
     "downloads": 1,
-    "views": 5
+    "views": 8
   },
   "transport:105ab1ed-e1a3-4942-9e8e-3c8bd34f8d90": {
     "downloads": 0,

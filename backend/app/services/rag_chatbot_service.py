@@ -1517,7 +1517,20 @@ def chatbot_response(
     # DOMAIN RESTRICTION CHECK: Only allow platform/dataset-related queries
     # ========================================================================
     # Allow through if: dataset_id provided, sector provided, or query is platform-related
-    if not (dataset_id or sector or is_platform_query(normalized_query, sector=sector)):
+    state = session_state(active_session_id)
+    
+    # 1. Update session state with provided context
+    if dataset_id:
+        state["lastDatasetId"] = dataset_id
+        state["lastDatasetTitle"] = dataset_title
+        
+    # 2. Context-Aware Query Rewriting
+    explicit_query = rewrite_query_with_context(normalized_query, state)
+    if explicit_query != normalized_query:
+        logger.info(f"[CHATBOT] Rewrote query: '{normalized_query}' -> '{explicit_query}'")
+        normalized_query = explicit_query
+
+    if not (dataset_id or sector or state.get("lastDatasetId") or is_platform_query(normalized_query, sector=sector)):
         return domain_restricted_response(active_session_id, normalized_query)
 
     normalized_sector = normalize_sector_key(sector) if sector and normalize_sector_key(sector) != "all" else None
@@ -1569,6 +1582,14 @@ def chatbot_response(
             )
             if response.get("restricted") and "dataset api could not be reached" in normalize_search_text(response.get("content")):
                 return metadata_fallback_response(active_session_id, target_dataset)
+                
+            # Update session memory with successful dataset analysis
+            if response.get("result"):
+                state["lastIntent"] = response["result"].get("intent")
+                state["lastColumns"] = response["result"].get("columns", [])
+                
+            # Add confidence score (High for direct dataset analysis)
+            response["confidence"] = 0.95
             return response
         except requests.RequestException as e:
             # API connection error - log and provide helpful message
@@ -1708,3 +1729,64 @@ def get_top_datasets(session_id: str, sector: str, limit: int = 10, state: str |
         "result": None,
         "history": _session_history[session_id],
     }
+# ============================================================================
+# CONTEXT-AWARE QUERY REWRITING
+# ============================================================================
+
+def rewrite_query_with_context(query: str, state: dict[str, Any]) -> str:
+    """Rewrite vague queries into explicit ones using session memory."""
+    normalized = normalize_search_text(query).lower()
+    last_dataset = state.get("lastDatasetTitle") or "the current dataset"
+    last_intent = state.get("lastIntent")
+    last_columns = state.get("lastColumns") or []
+
+    # Handle follow-up year/time questions
+    if re.search(r"\b(last year|previous year|in 20\d{2}|on 19\d{2})\b", normalized):
+        year_match = re.search(r"\b(20\d{2}|19\d{2})\b", normalized)
+        year_val = year_match.group(0) if year_match else "previous year"
+        if last_intent in {"mean", "max", "min", "count", "trend"} and last_columns:
+            return f"{last_intent} of {last_columns[0]} in {year_val}"
+        return f"summary of {last_dataset} in {year_val}"
+
+    # Handle vague "compare" questions
+    if normalized == "compare" or normalized == "comparison":
+        if last_columns and len(last_columns) >= 1:
+            return f"compare {last_columns[0]} across categories"
+        return f"compare key metrics in {last_dataset}"
+
+    # Handle vague statistical questions
+    if normalized in {"average", "mean", "max", "maximum", "min", "minimum"}:
+        if last_columns:
+            return f"{normalized} of {last_columns[0]}"
+        return f"average values in {last_dataset}"
+
+    # Handle "previous dataset" reference
+    if "previous dataset" in normalized and state.get("lastDatasetId"):
+         # This is handled naturally by target_dataset resolution, 
+         # but we can make it more explicit if needed.
+         pass
+
+    return query
+
+
+# ============================================================================
+# MODULAR PLUGIN SYSTEM (ORCHESTRATOR)
+# ============================================================================
+
+class ChatbotPlugin:
+    def can_handle(self, query: str, context: dict[str, Any]) -> bool:
+        return False
+    
+    def process(self, query: str, context: dict[str, Any]) -> dict[str, Any] | None:
+        return None
+
+_plugins: list[ChatbotPlugin] = []
+
+def register_plugin(plugin: ChatbotPlugin):
+    _plugins.append(plugin)
+
+def try_plugins(query: str, context: dict[str, Any]) -> dict[str, Any] | None:
+    for plugin in _plugins:
+        if plugin.can_handle(query, context):
+            return plugin.process(query, context)
+    return None
